@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ShieldAlert, ShieldCheck, ShieldX, RefreshCw, Loader2, FileSpreadsheet } from 'lucide-react';
+import { ShieldAlert, ShieldCheck, ShieldX, RefreshCw, Loader2, FileSpreadsheet, BrainCircuit } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable, { Column } from '../../components/ui/DataTable';
@@ -20,6 +20,7 @@ export default function FraudPage() {
   const navigate = useNavigate();
   
   const [isAnalyzeModalOpen, setIsAnalyzeModalOpen] = useState(false);
+  const [isTrainModalOpen, setIsTrainModalOpen] = useState(false);
   const [riskFilter, setRiskFilter] = useState('');
 
   const { data: fraudData, isLoading } = useQuery({
@@ -37,6 +38,23 @@ export default function FraudPage() {
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Analysis failed');
       setIsAnalyzeModalOpen(false);
+    },
+  });
+
+  const trainMutation = useMutation({
+    mutationFn: () => fraudApi.trainModel(),
+    onSuccess: (res) => {
+      const d = res.data;
+      if (d.trained) {
+        toast.success(`AI model trained on ${d.n_samples} batches.`);
+      } else {
+        toast.error(`Training failed: ${d.reason}`);
+      }
+      setIsTrainModalOpen(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Training failed');
+      setIsTrainModalOpen(false);
     },
   });
 
@@ -88,9 +106,9 @@ export default function FraudPage() {
       render: (row) => (
         <span className={cn(
           "font-bold",
-          row.anomalyScore >= 3 ? "text-red-600" : row.anomalyScore >= 1 ? "text-amber-600" : "text-green-600"
+          row.anomalyScore >= 0.65 ? "text-red-600" : row.anomalyScore >= 0.35 ? "text-amber-600" : "text-green-600"
         )}>
-          {row.anomalyScore.toFixed(1)}
+          {row.anomalyScore.toFixed(2)}
         </span>
       )
     },
@@ -147,6 +165,13 @@ export default function FraudPage() {
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Export CSV
+            </button>
+            <button
+              onClick={() => setIsTrainModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500"
+            >
+              <BrainCircuit className="h-4 w-4 mr-2" />
+              Train AI Model
             </button>
             <button
               onClick={() => setIsAnalyzeModalOpen(true)}
@@ -212,6 +237,16 @@ export default function FraudPage() {
         message="This will trigger the AI anomaly detection engine to analyze all active batches across the system. This process may take a few moments. Continue?"
         confirmLabel="Run Analysis"
         loading={analyzeMutation.isPending}
+      />
+
+      <ConfirmDialog
+        isOpen={isTrainModalOpen}
+        onCancel={() => setIsTrainModalOpen(false)}
+        onConfirm={() => trainMutation.mutate()}
+        title="Train AI Model"
+        message="This sends all existing batch data to the Isolation Forest model to learn what normal batches look like. Run this after adding new batches so the model stays up to date. Continue?"
+        confirmLabel="Train Model"
+        loading={trainMutation.isPending}
       />
     </div>
   );

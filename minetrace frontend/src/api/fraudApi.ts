@@ -22,5 +22,12 @@ export const fraudApi = {
       return { data: { success: true, analyzedCount: mockBatches.length } };
     }
     return api.post('/api/fraud/analyze-all');
-  }
+  },
+  trainModel: async () => {
+    if (USE_MOCK) {
+      await delay(1500);
+      return { data: { trained: true, n_samples: mockBatches.length } };
+    }
+    return api.post('/api/fraud/train-model');
+  },
 };

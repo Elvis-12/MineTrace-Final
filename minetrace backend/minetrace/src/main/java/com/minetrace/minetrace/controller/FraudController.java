@@ -45,4 +45,15 @@ public class FraudController {
                 "MineralBatch", null);
         return ResponseEntity.ok(Map.of("success", true, "analyzedCount", count));
     }
+
+    @PostMapping("/train-model")
+    public ResponseEntity<Map<String, Object>> trainModel(
+            @AuthenticationPrincipal UserDetails userDetails,
+            HttpServletRequest httpRequest) {
+        Map<String, Object> result = batchService.trainModel();
+        User currentUser = authService.getUserByEmail(userDetails.getUsername());
+        auditLogService.log("ML_MODEL_TRAIN", "FraudDetection", null, currentUser,
+                httpRequest.getRemoteAddr(), "Isolation Forest model training triggered");
+        return ResponseEntity.ok(result);
+    }
 }

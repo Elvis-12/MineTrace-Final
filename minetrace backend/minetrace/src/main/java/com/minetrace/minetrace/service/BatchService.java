@@ -11,12 +11,18 @@ import com.minetrace.minetrace.repository.MineRepository;
 import com.minetrace.minetrace.repository.MovementRepository;
 import com.minetrace.minetrace.repository.VerificationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -28,6 +34,9 @@ public class BatchService {
     private final MineRepository mineRepository;
     private final MovementRepository movementRepository;
     private final VerificationRepository verificationRepository;
+
+    private static final String ML_SERVICE_URL = "http://localhost:8000";
+    private final RestTemplate restTemplate = new RestTemplate();
 
     public List<BatchResponse> getAll(String search, String mineId) {
         List<Batch> batches;
@@ -156,58 +165,126 @@ public class BatchService {
     }
 
     private void performAnalysis(Batch batch) {
-        Batch.Flags flags = new Batch.Flags();
-        int score = 0;
-
-        // Weight flag: very high or zero weight
-        if (batch.getInitialWeight() > 5000 || batch.getInitialWeight() <= 0) {
-            flags.setWeight(true);
-            score++;
-        }
-
-        // License flag: mine has no license number
-        if (batch.getMine().getLicenseNumber() == null || batch.getMine().getLicenseNumber().isBlank()) {
-            flags.setLicense(true);
-            score++;
-        }
-
-        // Route flag: check if movements exist
-        long movementCount = movementRepository.findByBatchId(batch.getId()).size();
-        if (movementCount > 5) {
-            flags.setRoute(true);
-            score++;
-        }
-
-        // Duplicate flag: same batch code dispatched more than once
-        long dispatchCount = movementRepository.findByBatchId(batch.getId()).stream()
+        List<com.minetrace.minetrace.entity.Movement> movements = movementRepository.findByBatchId(batch.getId());
+        long movementCount = movements.size();
+        long dispatchCount = movements.stream()
                 .filter(m -> m.getEventType().name().equals("DISPATCH"))
                 .count();
+        long verificationCount = verificationRepository.countByBatchId(batch.getId());
+        boolean hasLicense = batch.getMine().getLicenseNumber() != null
+                && !batch.getMine().getLicenseNumber().isBlank();
+        long daysSinceExtraction = batch.getExtractionDate() != null
+                ? ChronoUnit.DAYS.between(batch.getExtractionDate().toLocalDate(), LocalDate.now())
+                : 0;
+
+        // --- Rule-based flags (always computed) ---
+        Batch.Flags flags = new Batch.Flags();
+        int ruleScore = 0;
+
+        if (batch.getInitialWeight() > 5000 || batch.getInitialWeight() <= 0) {
+            flags.setWeight(true);
+            ruleScore++;
+        }
+        if (!hasLicense) {
+            flags.setLicense(true);
+            ruleScore++;
+        }
+        if (movementCount > 5) {
+            flags.setRoute(true);
+            ruleScore++;
+        }
         if (dispatchCount > 1) {
             flags.setDuplicate(true);
-            score++;
+            ruleScore++;
         }
-
-        // Handover flag: no verifications for this batch
-        long verificationCount = verificationRepository.countByBatchId(batch.getId());
         if (verificationCount == 0 && movementCount > 0) {
             flags.setHandover(true);
-            score++;
+            ruleScore++;
         }
 
+        // --- AI: call Isolation Forest microservice ---
+        double anomalyScore = ruleScore / 5.0;          // fallback: normalised rule score
+        String aiRiskLevel = null;
+
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("batch_id", String.valueOf(batch.getId()));
+            payload.put("initial_weight", batch.getInitialWeight());
+            payload.put("movement_count", (int) movementCount);
+            payload.put("dispatch_count", (int) dispatchCount);
+            payload.put("verification_count", (int) verificationCount);
+            payload.put("days_since_extraction", (double) daysSinceExtraction);
+            payload.put("has_license", hasLicense);
+
+            @SuppressWarnings("unchecked")
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    ML_SERVICE_URL + "/analyze", payload, Map.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map<?, ?> body = response.getBody();
+                anomalyScore = ((Number) body.get("anomaly_score")).doubleValue();
+                aiRiskLevel  = (String) body.get("risk_level");
+            }
+        } catch (Exception e) {
+            // ML service unavailable — fall back to rule-based score silently
+        }
+
+        // --- Combine: AI score drives risk level when available ---
         batch.setFlags(flags);
-        batch.setAnomalyScore((double) score);
+        batch.setAnomalyScore(anomalyScore);
 
-        if (score == 0) {
-            batch.setRiskLevel(Batch.RiskLevel.LOW);
-        } else if (score <= 2) {
-            batch.setRiskLevel(Batch.RiskLevel.MEDIUM);
+        Batch.RiskLevel riskLevel;
+        if (aiRiskLevel != null) {
+            riskLevel = Batch.RiskLevel.valueOf(aiRiskLevel);
+        } else if (ruleScore == 0) {
+            riskLevel = Batch.RiskLevel.LOW;
+        } else if (ruleScore <= 2) {
+            riskLevel = Batch.RiskLevel.MEDIUM;
         } else {
-            batch.setRiskLevel(Batch.RiskLevel.HIGH);
+            riskLevel = Batch.RiskLevel.HIGH;
         }
 
-        if (score >= 3) {
+        batch.setRiskLevel(riskLevel);
+        if (riskLevel == Batch.RiskLevel.HIGH) {
             batch.setStatus(Batch.Status.FLAGGED);
         }
+    }
+
+    /** Called by /api/fraud/train — forwards all batches to the ML service for training. */
+    public Map<String, Object> trainModel() {
+        List<Batch> batches = batchRepository.findAll();
+        List<Map<String, Object>> payload = batches.stream().map(b -> {
+            List<com.minetrace.minetrace.entity.Movement> movements = movementRepository.findByBatchId(b.getId());
+            long movementCount   = movements.size();
+            long dispatchCount   = movements.stream().filter(m -> m.getEventType().name().equals("DISPATCH")).count();
+            long verificationCount = verificationRepository.countByBatchId(b.getId());
+            boolean hasLicense   = b.getMine().getLicenseNumber() != null && !b.getMine().getLicenseNumber().isBlank();
+            long daysSince       = b.getExtractionDate() != null
+                    ? ChronoUnit.DAYS.between(b.getExtractionDate().toLocalDate(), LocalDate.now()) : 0;
+
+            Map<String, Object> item = new HashMap<>();
+            item.put("batch_id",             String.valueOf(b.getId()));
+            item.put("initial_weight",        b.getInitialWeight());
+            item.put("movement_count",        (int) movementCount);
+            item.put("dispatch_count",        (int) dispatchCount);
+            item.put("verification_count",    (int) verificationCount);
+            item.put("days_since_extraction", (double) daysSince);
+            item.put("has_license",           hasLicense);
+            return item;
+        }).collect(Collectors.toList());
+
+        try {
+            Map<String, Object> body = new HashMap<>();
+            body.put("batches", payload);
+            @SuppressWarnings("unchecked")
+            ResponseEntity<Map> resp = restTemplate.postForEntity(ML_SERVICE_URL + "/train", body, Map.class);
+            if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                return resp.getBody();
+            }
+        } catch (Exception e) {
+            return Map.of("trained", false, "reason", "ML service unavailable: " + e.getMessage());
+        }
+        return Map.of("trained", false, "reason", "Unexpected error");
     }
 
     private String generateBatchCode() {
