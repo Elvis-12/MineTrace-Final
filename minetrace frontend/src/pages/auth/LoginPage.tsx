@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -19,7 +19,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuthStore();
+  const from = (location.state as any)?.from?.pathname + ((location.state as any)?.from?.search || '') || null;
 
   const {
     register,
@@ -36,7 +38,9 @@ export default function LoginPage() {
       const { token, ...user } = response.data;
       login(token, user);
       
-      if (user.role === 'INSPECTOR') {
+      if (from) {
+        navigate(from, { replace: true });
+      } else if (user.role === 'INSPECTOR') {
         navigate(ROUTES.VERIFICATION);
       } else {
         navigate(ROUTES.DASHBOARD);

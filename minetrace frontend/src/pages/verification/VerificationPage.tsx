@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import toast from 'react-hot-toast';
 import { QrCode, Keyboard, Loader2, CheckCircle, AlertTriangle, XCircle, ArrowRight } from 'lucide-react';
@@ -13,6 +14,7 @@ import { cn } from '../../lib/utils';
 
 export default function VerificationPage() {
   const { user } = useAuthStore();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'scan' | 'manual'>('scan');
   const [batchCode, setBatchCode] = useState('');
   const [scannedBatch, setScannedBatch] = useState<any | null>(null);
@@ -43,6 +45,16 @@ export default function VerificationPage() {
       toast.success('Verification logged automatically');
     },
   });
+
+  // Auto-lookup when page is opened via QR code link (?scan=BATCH_CODE)
+  useEffect(() => {
+    const code = searchParams.get('scan');
+    if (code) {
+      setActiveTab('manual');
+      setBatchCode(code);
+      lookupMutation.mutate(code);
+    }
+  }, []);
 
   useEffect(() => {
     let html5QrCode: Html5Qrcode;

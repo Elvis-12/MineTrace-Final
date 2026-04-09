@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Plus, Loader2, Download, FileSpreadsheet, Trash2, Pencil } from 'lucide-react';
+import { Plus, Loader2, Download, FileSpreadsheet, Trash2, Pencil, QrCode } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable, { Column } from '../../components/ui/DataTable';
@@ -210,6 +210,17 @@ export default function BatchesPage() {
             className="text-sm font-medium text-primary-600 hover:text-primary-900 transition-colors"
           >
             View Details
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setQrModalData({ isOpen: true, batchCode: row.batchCode });
+            }}
+            className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+            title="Show QR Code"
+          >
+            <QrCode className="h-4 w-4" />
           </button>
           {canRegister && (
             <button
@@ -491,10 +502,10 @@ export default function BatchesPage() {
             Scan this QR code to quickly access batch details during transit and verification.
           </p>
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4">
-            <QRCodeCanvas 
+            <QRCodeCanvas
               ref={qrRef}
-              value={qrModalData.batchCode} 
-              size={200} 
+              value={`${import.meta.env.VITE_APP_URL || window.location.origin}/verification?scan=${qrModalData.batchCode}`}
+              size={200}
               level="H"
               includeMargin={true}
             />
