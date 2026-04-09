@@ -36,7 +36,15 @@ public class BatchService {
     private final VerificationRepository verificationRepository;
 
     private static final String ML_SERVICE_URL = "http://localhost:8000";
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = buildRestTemplate();
+
+    private static RestTemplate buildRestTemplate() {
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(2000);  // 2s to connect
+        factory.setReadTimeout(5000);     // 5s to read response
+        return new RestTemplate(factory);
+    }
 
     public List<BatchResponse> getAll(String search, String mineId) {
         List<Batch> batches;

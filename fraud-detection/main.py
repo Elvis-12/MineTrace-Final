@@ -3,14 +3,15 @@ from pydantic import BaseModel
 from sklearn.ensemble import IsolationForest
 import numpy as np
 import logging
+import pickle
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="MineTrace Fraud Detection Service")
 
-# Isolation Forest model — trained lazily on first analyze-all call or with /train
-model: IsolationForest | None = None
+MODEL_PATH = "model.pkl"
 
 # Feature order must be consistent across /train and /analyze
 FEATURES = [
@@ -21,6 +22,24 @@ FEATURES = [
     "days_since_extraction",
     "has_license",
 ]
+
+
+def _load_model() -> IsolationForest | None:
+    if os.path.exists(MODEL_PATH):
+        with open(MODEL_PATH, "rb") as f:
+            logger.info("Loaded saved model from disk")
+            return pickle.load(f)
+    return None
+
+
+def _save_model(m: IsolationForest):
+    with open(MODEL_PATH, "wb") as f:
+        pickle.dump(m, f)
+    logger.info("Model saved to disk")
+
+
+# Load persisted model on startup (survives service restarts)
+model: IsolationForest | None = _load_model()
 
 
 class BatchFeatures(BaseModel):
@@ -77,12 +96,14 @@ def train(request: TrainRequest):
 
     X = np.array([_to_vector(b) for b in request.batches])
 
-    model = IsolationForest(
+    m = IsolationForest(
         n_estimators=100,
-        contamination=0.1,   # assume ~10% of historical batches are anomalous
+        contamination=0.1,
         random_state=42,
     )
-    model.fit(X)
+    m.fit(X)
+    model = m
+    _save_model(model)
     logger.info("Isolation Forest trained on %d batches", len(request.batches))
     return {"trained": True, "n_samples": len(request.batches)}
 
@@ -94,8 +115,6 @@ def analyze(batch: BatchFeatures):
     x = np.array([_to_vector(batch)])
 
     if model is None:
-        # No model yet — use a minimal default trained on the single sample
-        # (gives a neutral score; Spring Boot will apply rule-based fallback anyway)
         tmp = IsolationForest(n_estimators=10, contamination=0.1, random_state=42)
         tmp.fit(x)
         raw = tmp.decision_function(x)[0]
