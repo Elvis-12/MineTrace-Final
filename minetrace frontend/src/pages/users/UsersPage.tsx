@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { UserPlus, Loader2, FileSpreadsheet, Trash2, Pencil } from 'lucide-react';
+import { UserPlus, Loader2, FileSpreadsheet, Trash2, Pencil, FileText } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable, { Column } from '../../components/ui/DataTable';
 import Modal from '../../components/ui/Modal';
@@ -14,6 +14,7 @@ import { authApi } from '../../api/authApi';
 import { organizationApi } from '../../api/organizationApi';
 import { formatDate } from '../../utils/formatDate';
 import { exportToCsv } from '../../utils/exportCsv';
+import { exportTablePdf } from '../../utils/exportPdf';
 import { ROLE_COLORS } from '../../utils/roleColors';
 import { cn } from '../../lib/utils';
 
@@ -255,6 +256,23 @@ export default function UsersPage() {
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Export CSV
+            </button>
+            <button
+              onClick={() => {
+                const exportData = filteredUsers.map((u: any) => ({
+                  'Full Name': u.fullName,
+                  'Email': u.email,
+                  'Role': u.role,
+                  'Status': u.status,
+                  'Organization': u.organizationName,
+                  'Date Created': formatDate(u.createdAt),
+                }));
+                exportTablePdf('Users Register', 'All system users and their assigned roles', exportData, 'minetrace-users');
+              }}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
             </button>
             <button
               onClick={() => setIsCreateModalOpen(true)}

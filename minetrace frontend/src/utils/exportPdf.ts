@@ -308,3 +308,38 @@ export const exportToPdf = (title: string, columns: string[], data: any[][], fil
   });
   doc.save(`${filename}.pdf`);
 };
+
+/**
+ * Generic professional PDF for any table.
+ * rows: array of objects — keys become columns.
+ */
+export const exportTablePdf = (
+  title: string,
+  subtitle: string,
+  rows: Record<string, any>[],
+  filename: string,
+) => {
+  if (!rows.length) return;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: rows[0] && Object.keys(rows[0]).length > 6 ? 'landscape' : 'portrait' });
+
+  addHeader(doc, title, subtitle);
+
+  const columns = Object.keys(rows[0]);
+  const body = rows.map(r => columns.map(c => r[c] ?? ''));
+
+  autoTable(doc, {
+    startY: 58,
+    head: [columns],
+    body,
+    theme: 'grid',
+    headStyles: { fillColor: PRIMARY_DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 8 },
+    bodyStyles: { fontSize: 7.5, textColor: DARK },
+    alternateRowStyles: { fillColor: LIGHT_GRAY },
+    margin: { left: 10, right: 10 },
+    didDrawPage: (d: any) => {
+      addFooter(doc, d.pageNumber, (doc as any).internal.getNumberOfPages());
+    },
+  });
+
+  doc.save(`${filename}-${new Date().toISOString().slice(0, 10)}.pdf`);
+};

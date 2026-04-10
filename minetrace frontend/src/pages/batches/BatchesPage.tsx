@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Plus, Loader2, Download, FileSpreadsheet, Trash2, Pencil, QrCode } from 'lucide-react';
+import { Plus, Loader2, Download, FileSpreadsheet, Trash2, Pencil, QrCode, FileText } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable, { Column } from '../../components/ui/DataTable';
@@ -18,6 +18,7 @@ import { mineApi } from '../../api/mineApi';
 import { useAuthStore } from '../../store/authStore';
 import { formatDate } from '../../utils/formatDate';
 import { exportToCsv } from '../../utils/exportCsv';
+import { exportTablePdf } from '../../utils/exportPdf';
 import { ROUTES } from '../../constants/routes';
 import { STATUS_COLORS, RISK_COLORS } from '../../constants/statusColors';
 
@@ -309,6 +310,26 @@ export default function BatchesPage() {
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Export CSV
+            </button>
+            <button
+              onClick={() => {
+                const exportData = filteredBatches.map((b: any) => ({
+                  'Batch Code': b.batchCode,
+                  'Mineral Type': b.mineralType,
+                  'Initial Weight (kg)': b.initialWeight,
+                  'Status': b.status,
+                  'Risk Level': b.riskLevel,
+                  'Mine': b.mineName,
+                  'Extraction Date': formatDate(b.extractionDate).split(' ')[0],
+                  'Created By': b.createdBy,
+                  'Date Registered': formatDate(b.createdAt),
+                }));
+                exportTablePdf('Mineral Batches Register', 'All registered mineral batches and their current status', exportData, 'minetrace-batches');
+              }}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
             </button>
             {canRegister && (
               <button

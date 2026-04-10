@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ShieldAlert, ShieldCheck, ShieldX, RefreshCw, Loader2, FileSpreadsheet } from 'lucide-react';
+import { ShieldAlert, ShieldCheck, ShieldX, RefreshCw, Loader2, FileSpreadsheet, FileText } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable, { Column } from '../../components/ui/DataTable';
@@ -12,6 +12,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { fraudApi } from '../../api/fraudApi';
 import { formatDate } from '../../utils/formatDate';
 import { exportToCsv } from '../../utils/exportCsv';
+import { exportTablePdf } from '../../utils/exportPdf';
 import { ROUTES } from '../../constants/routes';
 import { cn } from '../../lib/utils';
 
@@ -151,6 +152,27 @@ export default function FraudPage() {
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Export CSV
+            </button>
+            <button
+              onClick={() => {
+                const exportData = batches.map((b: any) => ({
+                  'Batch Code': b.batchCode,
+                  'Mineral Type': b.mineralType,
+                  'Anomaly Score': b.anomalyScore.toFixed(2),
+                  'Risk Level': b.riskLevel,
+                  'Weight Flag': b.flags.weight ? 'Yes' : 'No',
+                  'Route Flag': b.flags.route ? 'Yes' : 'No',
+                  'Duplicate Flag': b.flags.duplicate ? 'Yes' : 'No',
+                  'License Flag': b.flags.license ? 'Yes' : 'No',
+                  'Handover Flag': b.flags.handover ? 'Yes' : 'No',
+                  'Analyzed Date': formatDate(b.createdAt),
+                }));
+                exportTablePdf('Fraud & Risk Analysis Report', 'AI-powered anomaly detection results for all mineral batches', exportData, 'minetrace-fraud-analysis');
+              }}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
             </button>
             <button
               onClick={() => setIsAnalyzeModalOpen(true)}

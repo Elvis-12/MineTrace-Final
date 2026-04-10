@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Mountain, Loader2, Package, FileSpreadsheet, Trash2, Pencil } from 'lucide-react';
+import { Mountain, Loader2, Package, FileSpreadsheet, Trash2, Pencil, FileText } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable, { Column } from '../../components/ui/DataTable';
 import Modal from '../../components/ui/Modal';
@@ -15,6 +15,7 @@ import { organizationApi } from '../../api/organizationApi';
 import { useAuthStore } from '../../store/authStore';
 import { formatDate } from '../../utils/formatDate';
 import { exportToCsv } from '../../utils/exportCsv';
+import { exportTablePdf } from '../../utils/exportPdf';
 import { ROUTES } from '../../constants/routes';
 import { cn } from '../../lib/utils';
 
@@ -270,6 +271,25 @@ export default function MinesPage() {
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Export CSV
+            </button>
+            <button
+              onClick={() => {
+                const exportData = filteredMines.map((m: any) => ({
+                  'Name': m.name,
+                  'Location': m.location,
+                  'Province': m.province || 'N/A',
+                  'District': m.district || 'N/A',
+                  'License Number': m.licenseNumber || 'N/A',
+                  'Organization': m.organizationName,
+                  'Status': m.active ? 'ACTIVE' : 'INACTIVE',
+                  'Date Registered': formatDate(m.createdAt),
+                }));
+                exportTablePdf('Mines Register', 'All registered extraction sites and concessions', exportData, 'minetrace-mines');
+              }}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
             </button>
             {isAdmin && (
               <button

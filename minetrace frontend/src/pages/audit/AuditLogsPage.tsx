@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Shield, Search, Filter, FileSpreadsheet } from 'lucide-react';
+import { Shield, Search, Filter, FileSpreadsheet, FileText } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable, { Column } from '../../components/ui/DataTable';
 import { authApi } from '../../api/authApi';
 import { formatDate } from '../../utils/formatDate';
 import { exportToCsv } from '../../utils/exportCsv';
+import { exportTablePdf } from '../../utils/exportPdf';
 import { cn } from '../../lib/utils';
 
 export default function AuditLogsPage() {
@@ -80,6 +81,7 @@ export default function AuditLogsPage() {
         title="Audit Logs" 
         subtitle="System-wide activity tracking for compliance and security."
         action={
+          <div className="flex gap-3">
           <button
             onClick={() => {
               const exportData = (logsData?.data || []).map((log: any) => ({
@@ -99,6 +101,26 @@ export default function AuditLogsPage() {
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Export CSV
           </button>
+          <button
+            onClick={() => {
+              const exportData = (logsData?.data || []).map((log: any) => ({
+                'Timestamp': formatDate(log.timestamp),
+                'Action': log.action,
+                'Entity': log.entityType,
+                'Entity ID': log.entityId || 'N/A',
+                'User': log.userName,
+                'Email': log.userEmail,
+                'IP Address': log.ipAddress,
+                'Details': log.details,
+              }));
+              exportTablePdf('Audit Log Report', 'System-wide activity trail for compliance and security review', exportData, 'minetrace-audit-logs');
+            }}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
+          </button>
+          </div>
         }
       />
 

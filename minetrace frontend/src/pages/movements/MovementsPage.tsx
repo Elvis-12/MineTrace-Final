@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Truck, Loader2, FileSpreadsheet, Pencil, Trash2 } from 'lucide-react';
+import { Truck, Loader2, FileSpreadsheet, Pencil, Trash2, FileText } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable, { Column } from '../../components/ui/DataTable';
 import Modal from '../../components/ui/Modal';
@@ -15,6 +15,7 @@ import { batchApi } from '../../api/batchApi';
 import { useAuthStore } from '../../store/authStore';
 import { formatDate } from '../../utils/formatDate';
 import { exportToCsv } from '../../utils/exportCsv';
+import { exportTablePdf } from '../../utils/exportPdf';
 import { ROUTES } from '../../constants/routes';
 import { cn } from '../../lib/utils';
 
@@ -256,6 +257,26 @@ export default function MovementsPage() {
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Export CSV
+            </button>
+            <button
+              onClick={() => {
+                const exportData = filteredMovements.map((m: any) => ({
+                  'Event Type': m.eventType,
+                  'Batch Code': m.batchCode,
+                  'From': m.fromLocation,
+                  'To': m.toLocation,
+                  'Weight (kg)': m.weight,
+                  'Vehicle': m.vehicle || 'N/A',
+                  'Driver': m.driverName || 'N/A',
+                  'Recorded By': m.recordedBy,
+                  'Timestamp': formatDate(m.timestamp),
+                }));
+                exportTablePdf('Movement Events Report', 'Physical movement records of mineral batches through the supply chain', exportData, 'minetrace-movements');
+              }}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
             </button>
             <button
               onClick={() => {

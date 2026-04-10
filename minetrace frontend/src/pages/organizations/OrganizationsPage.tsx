@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Building2, Loader2, Users, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Building2, Loader2, Users, FileSpreadsheet, Trash2, FileText } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable, { Column } from '../../components/ui/DataTable';
 import Modal from '../../components/ui/Modal';
@@ -13,6 +13,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { organizationApi } from '../../api/organizationApi';
 import { formatDate } from '../../utils/formatDate';
 import { exportToCsv } from '../../utils/exportCsv';
+import { exportTablePdf } from '../../utils/exportPdf';
 import { ROUTES } from '../../constants/routes';
 
 const orgSchema = z.object({
@@ -157,6 +158,23 @@ export default function OrganizationsPage() {
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Export CSV
+            </button>
+            <button
+              onClick={() => {
+                const exportData = (orgsData?.data || []).map((org: any) => ({
+                  'Name': org.name,
+                  'Address': org.address || 'N/A',
+                  'Phone': org.phone || 'N/A',
+                  'Email': org.email || 'N/A',
+                  'Users Count': org.usersCount,
+                  'Date Created': formatDate(org.createdAt),
+                }));
+                exportTablePdf('Organizations Register', 'All registered mining companies, logistics partners and government bodies', exportData, 'minetrace-organizations');
+              }}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
             </button>
             <button
               onClick={openCreateModal}
