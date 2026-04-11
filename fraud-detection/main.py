@@ -77,7 +77,7 @@ def _to_vector(b: BatchFeatures) -> list[float]:
 def _score_to_risk(score: float) -> str:
     if score < 0.35:
         return "LOW"
-    elif score < 0.65:
+    elif score < 0.50:
         return "MEDIUM"
     else:
         return "HIGH"

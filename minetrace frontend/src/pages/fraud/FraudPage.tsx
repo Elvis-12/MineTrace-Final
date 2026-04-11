@@ -96,7 +96,7 @@ export default function FraudPage() {
       render: (row) => (
         <span className={cn(
           "font-bold",
-          row.anomalyScore >= 0.65 ? "text-red-600" : row.anomalyScore >= 0.35 ? "text-amber-600" : "text-green-600"
+          row.anomalyScore >= 0.50 ? "text-red-600" : row.anomalyScore >= 0.35 ? "text-amber-600" : "text-green-600"
         )}>
           {(row.anomalyScore * 100).toFixed(0)}%
         </span>

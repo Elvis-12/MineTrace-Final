@@ -285,13 +285,13 @@ export default function BatchDetailPage() {
         <div className="mb-8">
           <div className="flex justify-between items-end mb-2">
             <span className="text-sm font-medium text-gray-700">Anomaly Score</span>
-            <span className={cn("text-lg font-bold", batch.anomalyScore >= 0.65 ? "text-red-600" : batch.anomalyScore >= 0.35 ? "text-amber-600" : "text-green-600")}>
+            <span className={cn("text-lg font-bold", batch.anomalyScore >= 0.50 ? "text-red-600" : batch.anomalyScore >= 0.35 ? "text-amber-600" : "text-green-600")}>
               {(batch.anomalyScore * 100).toFixed(0)}%
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
             <div
-              className={cn("h-2.5 rounded-full transition-all duration-500", batch.anomalyScore >= 0.65 ? "bg-red-600" : batch.anomalyScore >= 0.35 ? "bg-amber-500" : "bg-green-500")}
+              className={cn("h-2.5 rounded-full transition-all duration-500", batch.anomalyScore >= 0.50 ? "bg-red-600" : batch.anomalyScore >= 0.35 ? "bg-amber-500" : "bg-green-500")}
               style={{ width: `${batch.anomalyScore * 100}%` }}
             ></div>
           </div>
