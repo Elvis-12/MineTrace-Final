@@ -228,9 +228,9 @@ public class BatchService {
             payload.put("initial_weight", batch.getInitialWeight());
             payload.put("movement_count", (int) movementCount);
             payload.put("dispatch_count", (int) dispatchCount);
-            payload.put("verification_count", (int) verificationCount);
+            payload.put("verification_count", (int) verificationRepository.countByBatchId(batch.getId()));
             payload.put("days_since_extraction", (double) daysSinceExtraction);
-            payload.put("has_license", hasLicense);
+            payload.put("has_license", batch.getMine().getLicenseNumber() != null && !batch.getMine().getLicenseNumber().isBlank());
 
             @SuppressWarnings("unchecked")
             ResponseEntity<Map> response = restTemplate.postForEntity(
