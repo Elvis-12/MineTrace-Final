@@ -286,7 +286,7 @@ export default function BatchDetailPage() {
           <div className="flex justify-between items-end mb-2">
             <span className="text-sm font-medium text-gray-700">Anomaly Score</span>
             <span className={cn("text-lg font-bold", batch.anomalyScore >= 0.65 ? "text-red-600" : batch.anomalyScore >= 0.35 ? "text-amber-600" : "text-green-600")}>
-              {batch.anomalyScore.toFixed(2)} / 1.00
+              {(batch.anomalyScore * 100).toFixed(0)}%
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
