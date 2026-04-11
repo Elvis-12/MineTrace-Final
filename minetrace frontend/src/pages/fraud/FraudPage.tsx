@@ -79,13 +79,9 @@ export default function FraudPage() {
       render: (row) => (
         <div className="flex gap-1 flex-wrap">
           <div className={cn("h-2.5 w-2.5 rounded-full", row.flags.weight ? "bg-red-500" : "bg-green-500")} title="Weight Anomaly (>5000kg or 0)"></div>
-          <div className={cn("h-2.5 w-2.5 rounded-full", row.flags.route ? "bg-red-500" : "bg-green-500")} title="Route Deviation (>5 movements)"></div>
           <div className={cn("h-2.5 w-2.5 rounded-full", row.flags.duplicate ? "bg-red-500" : "bg-green-500")} title="Duplicate Dispatch"></div>
-          <div className={cn("h-2.5 w-2.5 rounded-full", row.flags.license ? "bg-red-500" : "bg-green-500")} title="License Issue"></div>
-          <div className={cn("h-2.5 w-2.5 rounded-full", row.flags.handover ? "bg-red-500" : "bg-green-500")} title="Missing Handover Verification"></div>
           <div className={cn("h-2.5 w-2.5 rounded-full", row.flags.weightLoss ? "bg-red-500" : "bg-green-500")} title="Weight Loss >20% Between Movements"></div>
           <div className={cn("h-2.5 w-2.5 rounded-full", row.flags.futureExtraction ? "bg-red-500" : "bg-green-500")} title="Future Extraction Date"></div>
-          <div className={cn("h-2.5 w-2.5 rounded-full", row.flags.duplicateCode ? "bg-red-500" : "bg-green-500")} title="Duplicate Batch Code"></div>
         </div>
       )
     },
@@ -140,16 +136,12 @@ export default function FraudPage() {
                 const exportData = batches.map((b: any) => ({
                   'Batch Code': b.batchCode,
                   'Mineral Type': b.mineralType,
-                  'Anomaly Score': b.anomalyScore.toFixed(1),
+                  'Anomaly Score': `${(b.anomalyScore * 100).toFixed(0)}%`,
                   'Risk Level': b.riskLevel,
                   'Weight Anomaly': b.flags.weight ? 'Yes' : 'No',
-                  'Route Deviation': b.flags.route ? 'Yes' : 'No',
                   'Duplicate Dispatch': b.flags.duplicate ? 'Yes' : 'No',
-                  'License Issue': b.flags.license ? 'Yes' : 'No',
-                  'Missing Handover': b.flags.handover ? 'Yes' : 'No',
                   'Weight Loss >20%': b.flags.weightLoss ? 'Yes' : 'No',
-                  'Future Extraction': b.flags.futureExtraction ? 'Yes' : 'No',
-                  'Duplicate Code': b.flags.duplicateCode ? 'Yes' : 'No',
+                  'Future Extraction Date': b.flags.futureExtraction ? 'Yes' : 'No',
                   'Analyzed Date': formatDate(b.createdAt),
                 }));
                 exportToCsv(exportData, 'minetrace-fraud-analysis');
@@ -164,16 +156,12 @@ export default function FraudPage() {
                 const exportData = batches.map((b: any) => ({
                   'Batch Code': b.batchCode,
                   'Mineral Type': b.mineralType,
-                  'Anomaly Score': b.anomalyScore.toFixed(2),
+                  'Anomaly Score': `${(b.anomalyScore * 100).toFixed(0)}%`,
                   'Risk Level': b.riskLevel,
                   'Weight Anomaly': b.flags.weight ? 'Yes' : 'No',
-                  'Route Deviation': b.flags.route ? 'Yes' : 'No',
                   'Duplicate Dispatch': b.flags.duplicate ? 'Yes' : 'No',
-                  'License Issue': b.flags.license ? 'Yes' : 'No',
-                  'Missing Handover': b.flags.handover ? 'Yes' : 'No',
                   'Weight Loss >20%': b.flags.weightLoss ? 'Yes' : 'No',
-                  'Future Extraction': b.flags.futureExtraction ? 'Yes' : 'No',
-                  'Duplicate Code': b.flags.duplicateCode ? 'Yes' : 'No',
+                  'Future Extraction Date': b.flags.futureExtraction ? 'Yes' : 'No',
                   'Analyzed Date': formatDate(b.createdAt),
                 }));
                 exportTablePdf('Fraud & Risk Analysis Report', 'AI-powered anomaly detection results for all mineral batches', exportData, 'minetrace-fraud-analysis');

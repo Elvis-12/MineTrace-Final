@@ -178,71 +178,48 @@ public class BatchService {
         long dispatchCount = movements.stream()
                 .filter(m -> m.getEventType().name().equals("DISPATCH"))
                 .count();
-        long verificationCount = verificationRepository.countByBatchId(batch.getId());
-        boolean hasLicense = batch.getMine().getLicenseNumber() != null
-                && !batch.getMine().getLicenseNumber().isBlank();
         long daysSinceExtraction = batch.getExtractionDate() != null
                 ? ChronoUnit.DAYS.between(batch.getExtractionDate().toLocalDate(), LocalDate.now())
                 : 0;
 
-        // --- Rule-based flags (always computed) ---
+        // --- Rule-based flags ---
         Batch.Flags flags = new Batch.Flags();
         int ruleScore = 0;
 
+        // 1. Weight anomaly: falsified or impossible weight
         if (batch.getInitialWeight() > 5000 || batch.getInitialWeight() <= 0) {
             flags.setWeight(true);
             ruleScore++;
         }
-        if (!hasLicense) {
-            flags.setLicense(true);
-            ruleScore++;
-        }
-        if (movementCount > 5) {
-            flags.setRoute(true);
-            ruleScore++;
-        }
+
+        // 2. Duplicate dispatch: same batch dispatched more than once
         if (dispatchCount > 1) {
             flags.setDuplicate(true);
             ruleScore++;
         }
-        if (verificationCount == 0 && movementCount > 0) {
-            flags.setHandover(true);
-            ruleScore++;
-        }
 
-        // --- New flags ---
-
-        // Weight loss: last recorded movement weight is significantly less than initial weight
+        // 3. Weight loss >20%: mineral being siphoned between movements
         if (!movements.isEmpty()) {
             double lastWeight = movements.stream()
                     .max(java.util.Comparator.comparing(com.minetrace.minetrace.entity.Movement::getTimestamp))
                     .map(com.minetrace.minetrace.entity.Movement::getWeight)
                     .orElse(batch.getInitialWeight());
             double lossPct = (batch.getInitialWeight() - lastWeight) / batch.getInitialWeight();
-            if (lossPct > 0.20) { // more than 20% unexplained weight loss
+            if (lossPct > 0.20) {
                 flags.setWeightLoss(true);
                 ruleScore++;
             }
         }
 
-        // Future extraction date
+        // 4. Future extraction date: date has not yet occurred
         if (batch.getExtractionDate() != null
                 && batch.getExtractionDate().toLocalDate().isAfter(LocalDate.now())) {
             flags.setFutureExtraction(true);
             ruleScore++;
         }
 
-        // Duplicate batch code: more than one batch with same code
-        long sameCodeCount = batchRepository.findAll().stream()
-                .filter(b -> b.getBatchCode().equals(batch.getBatchCode()))
-                .count();
-        if (sameCodeCount > 1) {
-            flags.setDuplicateCode(true);
-            ruleScore++;
-        }
-
         // --- AI: call Isolation Forest microservice ---
-        double anomalyScore = ruleScore / 8.0;          // fallback: normalised rule score (8 flags total)
+        double anomalyScore = ruleScore / 4.0;          // fallback: normalised rule score (4 flags total)
         String aiRiskLevel = null;
 
         try {

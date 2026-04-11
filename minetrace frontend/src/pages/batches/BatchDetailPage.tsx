@@ -297,16 +297,12 @@ export default function BatchDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
           {[
             { key: 'weight',           label: 'Weight anomaly (>5000kg or 0)' },
-            { key: 'route',            label: 'Route deviation (>5 movements)' },
             { key: 'duplicate',        label: 'Duplicate dispatch event' },
-            { key: 'license',          label: 'License compliance issue' },
-            { key: 'handover',         label: 'Missing handover verification' },
             { key: 'weightLoss',       label: 'Weight loss >20% between movements' },
             { key: 'futureExtraction', label: 'Extraction date in the future' },
-            { key: 'duplicateCode',    label: 'Duplicate batch code detected' },
           ].map((flag) => {
             const isFlagged = batch.flags[flag.key as keyof typeof batch.flags];
             return (
