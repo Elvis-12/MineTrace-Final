@@ -285,25 +285,28 @@ export default function BatchDetailPage() {
         <div className="mb-8">
           <div className="flex justify-between items-end mb-2">
             <span className="text-sm font-medium text-gray-700">Anomaly Score</span>
-            <span className={cn("text-lg font-bold", batch.anomalyScore >= 3 ? "text-red-600" : batch.anomalyScore >= 1 ? "text-amber-600" : "text-green-600")}>
-              {batch.anomalyScore.toFixed(1)} / 5.0
+            <span className={cn("text-lg font-bold", batch.anomalyScore >= 0.65 ? "text-red-600" : batch.anomalyScore >= 0.35 ? "text-amber-600" : "text-green-600")}>
+              {batch.anomalyScore.toFixed(2)} / 1.00
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-            <div 
-              className={cn("h-2.5 rounded-full transition-all duration-500", batch.anomalyScore >= 3 ? "bg-red-600" : batch.anomalyScore >= 1 ? "bg-amber-500" : "bg-green-500")}
-              style={{ width: `${(batch.anomalyScore / 5) * 100}%` }}
+            <div
+              className={cn("h-2.5 rounded-full transition-all duration-500", batch.anomalyScore >= 0.65 ? "bg-red-600" : batch.anomalyScore >= 0.35 ? "bg-amber-500" : "bg-green-500")}
+              style={{ width: `${batch.anomalyScore * 100}%` }}
             ></div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {[
-            { key: 'weight', label: 'Weight anomaly detected' },
-            { key: 'route', label: 'Route deviation detected' },
-            { key: 'duplicate', label: 'Duplicate event detected' },
-            { key: 'license', label: 'License compliance issue' },
-            { key: 'handover', label: 'Missing handover step' },
+            { key: 'weight',           label: 'Weight anomaly (>5000kg or 0)' },
+            { key: 'route',            label: 'Route deviation (>5 movements)' },
+            { key: 'duplicate',        label: 'Duplicate dispatch event' },
+            { key: 'license',          label: 'License compliance issue' },
+            { key: 'handover',         label: 'Missing handover verification' },
+            { key: 'weightLoss',       label: 'Weight loss >20% between movements' },
+            { key: 'futureExtraction', label: 'Extraction date in the future' },
+            { key: 'duplicateCode',    label: 'Duplicate batch code detected' },
           ].map((flag) => {
             const isFlagged = batch.flags[flag.key as keyof typeof batch.flags];
             return (
