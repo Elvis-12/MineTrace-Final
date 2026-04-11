@@ -210,8 +210,39 @@ public class BatchService {
             ruleScore++;
         }
 
+        // --- New flags ---
+
+        // Weight loss: last recorded movement weight is significantly less than initial weight
+        if (!movements.isEmpty()) {
+            double lastWeight = movements.stream()
+                    .max(java.util.Comparator.comparing(com.minetrace.minetrace.entity.Movement::getTimestamp))
+                    .map(com.minetrace.minetrace.entity.Movement::getWeight)
+                    .orElse(batch.getInitialWeight());
+            double lossPct = (batch.getInitialWeight() - lastWeight) / batch.getInitialWeight();
+            if (lossPct > 0.20) { // more than 20% unexplained weight loss
+                flags.setWeightLoss(true);
+                ruleScore++;
+            }
+        }
+
+        // Future extraction date
+        if (batch.getExtractionDate() != null
+                && batch.getExtractionDate().toLocalDate().isAfter(LocalDate.now())) {
+            flags.setFutureExtraction(true);
+            ruleScore++;
+        }
+
+        // Duplicate batch code: more than one batch with same code
+        long sameCodeCount = batchRepository.findAll().stream()
+                .filter(b -> b.getBatchCode().equals(batch.getBatchCode()))
+                .count();
+        if (sameCodeCount > 1) {
+            flags.setDuplicateCode(true);
+            ruleScore++;
+        }
+
         // --- AI: call Isolation Forest microservice ---
-        double anomalyScore = ruleScore / 5.0;          // fallback: normalised rule score
+        double anomalyScore = ruleScore / 8.0;          // fallback: normalised rule score (8 flags total)
         String aiRiskLevel = null;
 
         try {

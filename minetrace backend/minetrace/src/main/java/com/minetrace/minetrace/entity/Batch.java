@@ -66,6 +66,9 @@ public class Batch {
         private Boolean duplicate = false;
         private Boolean license = false;
         private Boolean handover = false;
+        private Boolean weightLoss = false;       // weight dropped between movements
+        private Boolean futureExtraction = false; // extraction date is in the future
+        private Boolean duplicateCode = false;    // same batch code registered more than once
     }
 
     public enum Status {
