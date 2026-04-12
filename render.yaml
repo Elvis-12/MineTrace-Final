@@ -2,10 +2,9 @@ services:
   # ── Spring Boot Backend ──────────────────────────────────────────────────────
   - type: web
     name: minetrace-backend
-    runtime: java
+    runtime: docker
     rootDir: minetrace backend/minetrace
-    buildCommand: mvn clean package -DskipTests
-    startCommand: java -jar target/*.jar
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: DATABASE_URL
         fromDatabase:
