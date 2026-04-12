@@ -35,7 +35,8 @@ public class BatchService {
     private final MovementRepository movementRepository;
     private final VerificationRepository verificationRepository;
 
-    private static final String ML_SERVICE_URL = "http://localhost:8000";
+    private static final String ML_SERVICE_URL = System.getenv("ML_SERVICE_URL") != null
+            ? System.getenv("ML_SERVICE_URL") : "http://localhost:8000";
     private final RestTemplate restTemplate = buildRestTemplate();
 
     private static RestTemplate buildRestTemplate() {
