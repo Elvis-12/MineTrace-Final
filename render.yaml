@@ -3,8 +3,7 @@ services:
   - type: web
     name: minetrace-backend
     runtime: docker
-    rootDir: minetrace backend/minetrace
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./minetrace backend/minetrace/Dockerfile
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -29,14 +28,13 @@ services:
   - type: web
     name: minetrace-ml
     runtime: docker
-    rootDir: fraud-detection
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./fraud-detection/Dockerfile
 
   # ── React Frontend ───────────────────────────────────────────────────────────
   - type: web
     name: minetrace-frontend
     runtime: static
-    rootDir: minetrace frontend
+    rootDir: "minetrace frontend"
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     envVars:
