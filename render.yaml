@@ -3,8 +3,7 @@ services:
   - type: web
     name: minetrace-backend
     runtime: docker
-    dockerfilePath: ./minetrace-backend/minetrace/Dockerfile
-    dockerContext: ./minetrace-backend/minetrace
+    dockerfilePath: ./Dockerfile.backend
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -27,8 +26,7 @@ services:
   - type: web
     name: minetrace-ml
     runtime: docker
-    dockerfilePath: ./fraud-detection/Dockerfile
-    dockerContext: ./fraud-detection
+    dockerfilePath: ./Dockerfile.ml
 
   # ── React Frontend ───────────────────────────────────────────────────────────
   - type: web
