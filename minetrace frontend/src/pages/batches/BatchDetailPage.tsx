@@ -230,7 +230,7 @@ export default function BatchDetailPage() {
           
           <div className="flex flex-col items-center justify-center bg-gray-50 p-6 rounded-xl border border-gray-100 min-w-[240px]">
             <div className="bg-white p-3 rounded-lg shadow-sm mb-4">
-              <QRCodeCanvas ref={qrRef} value={batch.batchCode} size={160} level="H" includeMargin={true} />
+              <QRCodeCanvas ref={qrRef} value={`${import.meta.env.VITE_APP_URL || window.location.origin}/verification?scan=${batch.batchCode}`} size={160} level="H" includeMargin={true} />
             </div>
             <button
               onClick={downloadQR}
