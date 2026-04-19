@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, Package, Truck, QrCode, ShieldAlert, 
-  BarChart3, Mountain, Building2, Users, ClipboardList, 
-  Bell, LogOut, Menu, X 
+import {
+  LayoutDashboard, Package, Truck, QrCode, ShieldAlert,
+  BarChart3, Mountain, Building2, Users, ClipboardList,
+  Bell, LogOut, Menu, X, ShieldCheck
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { ROUTES } from '../../constants/routes';
@@ -27,6 +27,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
   const navItems = [
     { path: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'MINE_OFFICER', 'SUPPLY_OFFICER', 'INSPECTOR'] },
+    { path: ROUTES.INSPECTOR_DASHBOARD, label: 'Inspection Queue', icon: ShieldCheck, roles: ['INSPECTOR', 'ADMIN'] },
     { path: ROUTES.BATCHES, label: 'Batches', icon: Package, roles: ['ADMIN', 'MINE_OFFICER', 'SUPPLY_OFFICER'] },
     { path: ROUTES.MOVEMENTS, label: 'Movement Events', icon: Truck, roles: ['ADMIN', 'SUPPLY_OFFICER'] },
     { path: ROUTES.VERIFICATION, label: 'QR Verification', icon: QrCode, roles: ['ADMIN', 'MINE_OFFICER', 'SUPPLY_OFFICER', 'INSPECTOR'] },
@@ -36,7 +37,6 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     { path: ROUTES.ORGANIZATIONS, label: 'Organizations', icon: Building2, roles: ['ADMIN'] },
     { path: ROUTES.USERS, label: 'Users', icon: Users, roles: ['ADMIN'] },
     { path: ROUTES.AUDIT_LOGS, label: 'Audit Logs', icon: ClipboardList, roles: ['ADMIN'] },
-    { path: ROUTES.NOTIFICATIONS, label: 'Notifications', icon: Bell, roles: ['ADMIN', 'MINE_OFFICER', 'SUPPLY_OFFICER', 'INSPECTOR'] },
   ];
 
   const filteredNavItems = navItems.filter(item => user?.role && item.roles.includes(user.role));

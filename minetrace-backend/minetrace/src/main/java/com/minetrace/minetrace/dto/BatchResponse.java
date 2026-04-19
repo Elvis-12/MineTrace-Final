@@ -23,6 +23,12 @@ public class BatchResponse {
     private FlagsDto flags;
     private String overrideNote;
 
+    // Inspector compliance fields
+    private Boolean inspectorApproved;
+    private String inspectorNote;
+    private String inspectedBy;
+    private String inspectedAt;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -32,5 +38,7 @@ public class BatchResponse {
         private boolean duplicate;
         private boolean license;
         private boolean handover;
+        private boolean weightLoss;
+        private boolean futureExtraction;
     }
 }

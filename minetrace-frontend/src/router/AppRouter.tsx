@@ -18,11 +18,11 @@ const MovementsPage = lazy(() => import('../pages/movements/MovementsPage'));
 const VerificationPage = lazy(() => import('../pages/verification/VerificationPage'));
 const FraudPage = lazy(() => import('../pages/fraud/FraudPage'));
 const ReportsPage = lazy(() => import('../pages/reports/ReportsPage'));
-const NotificationsPage = lazy(() => import('../pages/notifications/NotificationsPage'));
 const AuditLogsPage = lazy(() => import('../pages/audit/AuditLogsPage'));
 const ProfilePage = lazy(() => import('../pages/profile/ProfilePage'));
 const NotFoundPage = lazy(() => import('../pages/errors/NotFoundPage'));
 const UnauthorizedPage = lazy(() => import('../pages/errors/UnauthorizedPage'));
+const InspectorDashboardPage = lazy(() => import('../pages/inspector/InspectorDashboardPage'));
 
 const PageLoader = () => (
   <div className="flex h-[50vh] items-center justify-center">
@@ -56,6 +56,10 @@ export default function AppRouter() {
               <Route path={ROUTES.BATCHES} element={<BatchesPage />} />
             </Route>
 
+            <Route element={<RoleRoute allowedRoles={['INSPECTOR', 'ADMIN']} />}>
+              <Route path={ROUTES.INSPECTOR_DASHBOARD} element={<InspectorDashboardPage />} />
+            </Route>
+
             <Route element={<RoleRoute allowedRoles={['ADMIN', 'SUPPLY_OFFICER']} />}>
               <Route path={ROUTES.MOVEMENTS} element={<MovementsPage />} />
               <Route path={ROUTES.REPORTS} element={<ReportsPage />} />
@@ -64,7 +68,6 @@ export default function AppRouter() {
             {/* Accessible by all authenticated users, but specific actions inside might be gated */}
             <Route path="/batches/:id" element={<BatchDetailPage />} />
             <Route path={ROUTES.VERIFICATION} element={<VerificationPage />} />
-            <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
             <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
             
             <Route path={ROUTES.UNAUTHORIZED} element={<UnauthorizedPage />} />

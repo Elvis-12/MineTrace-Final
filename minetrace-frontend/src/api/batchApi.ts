@@ -72,5 +72,11 @@ export const batchApi = {
       return { data: { success: true } };
     }
     return api.delete(`/api/batches/${id}`);
+  },
+  inspect: async (id: string, approved: boolean, note: string) => {
+    return api.post(`/api/batches/${id}/inspect`, { approved, note });
+  },
+  getPendingInspection: async () => {
+    return api.get('/api/batches/pending-inspection');
   }
 };

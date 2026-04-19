@@ -310,13 +310,36 @@ public class BatchService {
         return String.format("MT-%d-%03d", year, count);
     }
 
+    public void inspect(Long id, boolean approved, String note, User inspector) {
+        Batch batch = batchRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Batch not found: " + id));
+        batch.setInspectorApproved(approved);
+        batch.setInspectorNote(note);
+        batch.setInspectedBy(inspector);
+        batch.setInspectedAt(LocalDateTime.now());
+        if (!approved) {
+            batch.setStatus(Batch.Status.FLAGGED);
+        }
+        batchRepository.save(batch);
+    }
+
+    public List<BatchResponse> getPendingInspection() {
+        return batchRepository.findAll().stream()
+                .filter(b -> b.getInspectorApproved() == null &&
+                        (b.getRiskLevel() == Batch.RiskLevel.HIGH || b.getStatus() == Batch.Status.FLAGGED))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public BatchResponse toResponse(Batch batch) {
         BatchResponse.FlagsDto flagsDto = new BatchResponse.FlagsDto(
                 batch.getFlags() != null && Boolean.TRUE.equals(batch.getFlags().getWeight()),
                 batch.getFlags() != null && Boolean.TRUE.equals(batch.getFlags().getRoute()),
                 batch.getFlags() != null && Boolean.TRUE.equals(batch.getFlags().getDuplicate()),
                 batch.getFlags() != null && Boolean.TRUE.equals(batch.getFlags().getLicense()),
-                batch.getFlags() != null && Boolean.TRUE.equals(batch.getFlags().getHandover())
+                batch.getFlags() != null && Boolean.TRUE.equals(batch.getFlags().getHandover()),
+                batch.getFlags() != null && Boolean.TRUE.equals(batch.getFlags().getWeightLoss()),
+                batch.getFlags() != null && Boolean.TRUE.equals(batch.getFlags().getFutureExtraction())
         );
 
         return new BatchResponse(
@@ -333,7 +356,11 @@ public class BatchService {
                 batch.getCreatedAt().toString(),
                 batch.getAnomalyScore() != null ? batch.getAnomalyScore() : 0.0,
                 flagsDto,
-                batch.getOverrideNote()
+                batch.getOverrideNote(),
+                batch.getInspectorApproved(),
+                batch.getInspectorNote(),
+                batch.getInspectedBy() != null ? batch.getInspectedBy().getFullName() : null,
+                batch.getInspectedAt() != null ? batch.getInspectedAt().toString() : null
         );
     }
 }

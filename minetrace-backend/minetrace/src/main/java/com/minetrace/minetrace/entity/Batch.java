@@ -56,6 +56,20 @@ public class Batch {
     @Column
     private String overrideNote;
 
+    // Inspector compliance fields
+    @Column
+    private Boolean inspectorApproved;
+
+    @Column
+    private String inspectorNote;
+
+    @ManyToOne
+    @JoinColumn(name = "inspected_by")
+    private User inspectedBy;
+
+    @Column
+    private LocalDateTime inspectedAt;
+
     @Embeddable
     @Data
     @NoArgsConstructor

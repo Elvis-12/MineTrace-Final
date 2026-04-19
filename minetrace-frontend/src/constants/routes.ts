@@ -14,4 +14,5 @@ export const ROUTES = {
   AUDIT_LOGS: '/audit-logs',
   PROFILE: '/profile',
   UNAUTHORIZED: '/unauthorized',
+  INSPECTOR_DASHBOARD: '/inspector',
 };

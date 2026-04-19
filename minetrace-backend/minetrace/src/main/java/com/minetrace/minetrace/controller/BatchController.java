@@ -2,7 +2,10 @@ package com.minetrace.minetrace.controller;
 
 import com.minetrace.minetrace.dto.*;
 import com.minetrace.minetrace.entity.User;
-import com.minetrace.minetrace.service.*;
+import com.minetrace.minetrace.service.AuditLogService;
+import com.minetrace.minetrace.service.AuthService;
+import com.minetrace.minetrace.service.BatchService;
+import com.minetrace.minetrace.service.VerificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +27,6 @@ public class BatchController {
     private final VerificationService verificationService;
     private final AuthService authService;
     private final AuditLogService auditLogService;
-    private final NotificationService notificationService;
 
     @GetMapping
     public ResponseEntity<List<BatchResponse>> getAll(
@@ -46,9 +48,6 @@ public class BatchController {
         BatchResponse response = batchService.create(request, currentUser);
         auditLogService.log("BATCH_CREATED", "MineralBatch", response.getId(), currentUser,
                 httpRequest.getRemoteAddr(), "Batch created: " + response.getBatchCode());
-        notificationService.createForAllUsers("SUCCESS", "New Batch Registered",
-                "Batch " + response.getBatchCode() + " (" + response.getMineralType() + ") has been registered.",
-                "MineralBatch", response.getId());
         return ResponseEntity.ok(response);
     }
 
@@ -97,6 +96,28 @@ public class BatchController {
         auditLogService.log("RISK_OVERRIDE", "MineralBatch", String.valueOf(id), currentUser,
                 httpRequest.getRemoteAddr(), "Risk overridden: " + request.getNote());
         return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    @PostMapping("/{id}/inspect")
+    @PreAuthorize("hasAnyRole('INSPECTOR', 'ADMIN')")
+    public ResponseEntity<Map<String, Boolean>> inspect(@PathVariable Long id,
+                                                         @RequestBody Map<String, Object> body,
+                                                         @AuthenticationPrincipal UserDetails userDetails,
+                                                         HttpServletRequest httpRequest) {
+        boolean approved = Boolean.TRUE.equals(body.get("approved"));
+        String note = (String) body.getOrDefault("note", "");
+        User currentUser = authService.getUserByEmail(userDetails.getUsername());
+        batchService.inspect(id, approved, note, currentUser);
+        auditLogService.log(approved ? "BATCH_APPROVED" : "BATCH_FLAGGED_INSPECTION",
+                "MineralBatch", String.valueOf(id), currentUser,
+                httpRequest.getRemoteAddr(), "Inspector " + (approved ? "approved" : "flagged") + " batch: " + note);
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    @GetMapping("/pending-inspection")
+    @PreAuthorize("hasAnyRole('INSPECTOR', 'ADMIN')")
+    public ResponseEntity<List<BatchResponse>> getPendingInspection() {
+        return ResponseEntity.ok(batchService.getPendingInspection());
     }
 
     @GetMapping("/{batchId}/verifications")

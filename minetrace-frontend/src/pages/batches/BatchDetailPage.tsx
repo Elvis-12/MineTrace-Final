@@ -332,6 +332,28 @@ export default function BatchDetailPage() {
           </div>
         )}
 
+        {/* Inspector Compliance Status */}
+        {batch.inspectorApproved !== null && batch.inspectorApproved !== undefined && (
+          <div className={cn("mt-4 p-4 rounded-lg border", batch.inspectorApproved ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200")}>
+            <div className="flex items-center gap-2 mb-1">
+              {batch.inspectorApproved
+                ? <CheckCircle className="h-5 w-5 text-green-600" />
+                : <XCircle className="h-5 w-5 text-red-600" />}
+              <h4 className={cn("text-sm font-bold", batch.inspectorApproved ? "text-green-800" : "text-red-800")}>
+                {batch.inspectorApproved ? "Inspector Approved" : "Inspector Flagged — Compliance Issue"}
+              </h4>
+            </div>
+            {batch.inspectorNote && (
+              <p className={cn("text-sm mt-1", batch.inspectorApproved ? "text-green-700" : "text-red-700")}>
+                {batch.inspectorNote}
+              </p>
+            )}
+            <p className="text-xs text-gray-500 mt-2">
+              Reviewed by {batch.inspectedBy || 'Inspector'}{batch.inspectedAt ? ` · ${formatDate(batch.inspectedAt)}` : ''}
+            </p>
+          </div>
+        )}
+
         {isAdmin && batch.riskLevel !== 'LOW' && !batch.overrideNote && (
           <div className="mt-6 pt-6 border-t border-gray-100">
             <button

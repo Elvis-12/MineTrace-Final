@@ -251,6 +251,26 @@ export default function VerificationPage() {
                   <p className="text-xs text-gray-500 mb-2">Registration Date</p>
                   <p className="text-sm font-medium text-gray-900">{formatDate(scannedBatch.createdAt)}</p>
                 </div>
+
+                {/* Inspector Compliance Status */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <p className="text-xs text-gray-500 mb-2">Inspector Compliance</p>
+                  {scannedBatch.inspectorApproved === true && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-700">Approved by {scannedBatch.inspectedBy || 'Inspector'}</span>
+                    </div>
+                  )}
+                  {scannedBatch.inspectorApproved === false && (
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                      <span className="text-sm font-medium text-red-700">Flagged by {scannedBatch.inspectedBy || 'Inspector'}</span>
+                    </div>
+                  )}
+                  {scannedBatch.inspectorApproved === null || scannedBatch.inspectorApproved === undefined ? (
+                    <span className="text-sm text-gray-400 italic">Pending inspector review</span>
+                  ) : null}
+                </div>
               </div>
 
               <div className="mt-8 flex justify-center">

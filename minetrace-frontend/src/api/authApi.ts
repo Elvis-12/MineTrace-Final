@@ -66,5 +66,8 @@ export const authApi = {
       return { data: { success: true } };
     }
     return api.delete(`/api/auth/users/${id}`);
+  },
+  getAuditLogs: async (params?: { search?: string; action?: string }) => {
+    return api.get('/api/audit-logs', { params });
   }
 };

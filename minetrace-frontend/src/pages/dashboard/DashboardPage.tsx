@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Package, Truck, ShieldAlert, Activity, ArrowRight, CheckCircle } from 'lucide-react';
+import { Package, Truck, ShieldAlert, Activity, ArrowRight, CheckCircle, ShieldCheck, Clock, XCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts';
 import { format } from 'date-fns';
 import StatCard from '../../components/ui/StatCard';
@@ -11,8 +11,12 @@ import { movementApi } from '../../api/movementApi';
 import { ROUTES } from '../../constants/routes';
 import { formatRelativeTime } from '../../utils/formatDate';
 import { STATUS_COLORS } from '../../constants/statusColors';
+import { useAuthStore } from '../../store/authStore';
 
 export default function DashboardPage() {
+  const { user } = useAuthStore();
+  const isInspector = user?.role === 'INSPECTOR';
+
   const { data: batchesData, isLoading: isLoadingBatches } = useQuery({
     queryKey: ['batches'],
     queryFn: () => batchApi.getAll(),
@@ -21,10 +25,18 @@ export default function DashboardPage() {
   const { data: movementsData, isLoading: isLoadingMovements } = useQuery({
     queryKey: ['movements'],
     queryFn: () => movementApi.getAll(),
+    enabled: !isInspector,
+  });
+
+  const { data: pendingData, isLoading: isLoadingPending } = useQuery({
+    queryKey: ['pending-inspection'],
+    queryFn: () => batchApi.getPendingInspection(),
+    enabled: isInspector,
   });
 
   const batches = batchesData?.data || [];
   const movements = movementsData?.data || [];
+  const pendingBatches = pendingData?.data || [];
 
   // Calculate stats
   const totalBatches = batches.length;
@@ -35,6 +47,10 @@ export default function DashboardPage() {
     const eventDate = new Date(m.timestamp);
     return eventDate.getDate() === today.getDate() && eventDate.getMonth() === today.getMonth() && eventDate.getFullYear() === today.getFullYear();
   }).length;
+
+  // Inspector stats
+  const approvedBatches = batches.filter((b: any) => b.inspectorApproved === true).length;
+  const flaggedByInspector = batches.filter((b: any) => b.inspectorApproved === false).length;
 
   // Chart Data: Registration over last 30 days (mocked for visual)
   const lineChartData = Array.from({ length: 7 }).map((_, i) => {
@@ -87,34 +103,69 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          icon={Package} 
-          label="Total Batches" 
-          value={totalBatches} 
-          colorClass="text-blue-600 bg-blue-100" 
-          loading={isLoadingBatches} 
-        />
-        <StatCard 
-          icon={Truck} 
-          label="In Transit" 
-          value={inTransitBatches} 
-          colorClass="text-amber-600 bg-amber-100" 
-          loading={isLoadingBatches} 
-        />
-        <StatCard 
-          icon={ShieldAlert} 
-          label="High Risk Flagged" 
-          value={highRiskBatches.length} 
-          colorClass="text-red-600 bg-red-100" 
-          loading={isLoadingBatches} 
-        />
-        <StatCard 
-          icon={Activity} 
-          label="Movements Today" 
-          value={movementsToday} 
-          colorClass="text-green-600 bg-green-100" 
-          loading={isLoadingMovements} 
-        />
+        {isInspector ? (
+          <>
+            <StatCard
+              icon={Clock}
+              label="Pending Inspection"
+              value={pendingBatches.length}
+              colorClass="text-blue-600 bg-blue-100"
+              loading={isLoadingPending}
+            />
+            <StatCard
+              icon={ShieldCheck}
+              label="Batches Approved"
+              value={approvedBatches}
+              colorClass="text-green-600 bg-green-100"
+              loading={isLoadingBatches}
+            />
+            <StatCard
+              icon={XCircle}
+              label="Batches Flagged"
+              value={flaggedByInspector}
+              colorClass="text-red-600 bg-red-100"
+              loading={isLoadingBatches}
+            />
+            <StatCard
+              icon={ShieldAlert}
+              label="High Risk Batches"
+              value={highRiskBatches.length}
+              colorClass="text-orange-600 bg-orange-100"
+              loading={isLoadingBatches}
+            />
+          </>
+        ) : (
+          <>
+            <StatCard
+              icon={Package}
+              label="Total Batches"
+              value={totalBatches}
+              colorClass="text-blue-600 bg-blue-100"
+              loading={isLoadingBatches}
+            />
+            <StatCard
+              icon={Truck}
+              label="In Transit"
+              value={inTransitBatches}
+              colorClass="text-amber-600 bg-amber-100"
+              loading={isLoadingBatches}
+            />
+            <StatCard
+              icon={ShieldAlert}
+              label="High Risk Flagged"
+              value={highRiskBatches.length}
+              colorClass="text-red-600 bg-red-100"
+              loading={isLoadingBatches}
+            />
+            <StatCard
+              icon={Activity}
+              label="Movements Today"
+              value={movementsToday}
+              colorClass="text-green-600 bg-green-100"
+              loading={isLoadingMovements}
+            />
+          </>
+        )}
       </div>
 
       {/* Charts Row 1 */}
