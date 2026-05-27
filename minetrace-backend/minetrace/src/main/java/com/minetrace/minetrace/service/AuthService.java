@@ -6,6 +6,7 @@ import com.minetrace.minetrace.entity.User;
 import com.minetrace.minetrace.repository.OrganizationRepository;
 import com.minetrace.minetrace.repository.UserRepository;
 import com.minetrace.minetrace.security.JwtUtil;
+import com.minetrace.minetrace.repository.BatchRepository;
 import com.minetrace.minetrace.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +26,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
     private final NotificationRepository notificationRepository;
+    private final BatchRepository batchRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -131,12 +133,23 @@ public class AuthService {
 
     @Transactional
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found");
-        }
-        // Remove notifications owned by this user first
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Null out inspector references in batches (nullable FK)
+        batchRepository.clearInspectedBy(user);
+
+        // Reassign created_by to admin for any batches this user created
+        userRepository.findByRole(User.Role.ADMIN).stream()
+                .filter(a -> !a.getId().equals(id))
+                .findFirst()
+                .ifPresent(admin -> batchRepository.findByCreatedBy(user)
+                        .forEach(b -> { b.setCreatedBy(admin); batchRepository.save(b); }));
+
+        // Remove notifications owned by this user
         notificationRepository.findByUserIdOrderByTimestampDesc(id)
                 .forEach(n -> notificationRepository.deleteById(n.getId()));
+
         userRepository.deleteById(id);
     }
 

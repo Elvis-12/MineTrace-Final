@@ -1,7 +1,9 @@
 package com.minetrace.minetrace.repository;
 
 import com.minetrace.minetrace.entity.Batch;
+import com.minetrace.minetrace.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -31,4 +33,10 @@ public interface BatchRepository extends JpaRepository<Batch, Long> {
 
     @Query("SELECT b.mineralType, COALESCE(SUM(b.initialWeight), 0) FROM Batch b GROUP BY b.mineralType")
     List<Object[]> getMineralDistributionStats();
+
+    List<Batch> findByCreatedBy(User user);
+
+    @Modifying
+    @Query("UPDATE Batch b SET b.inspectedBy = null WHERE b.inspectedBy = :user")
+    void clearInspectedBy(User user);
 }
