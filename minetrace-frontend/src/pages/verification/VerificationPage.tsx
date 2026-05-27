@@ -70,7 +70,13 @@ export default function VerificationPage() {
           // Stop scanning once we get a result
           html5QrCode.stop().then(() => {
             setIsScanning(false);
-            lookupMutation.mutate(decodedText);
+            // QR may contain a full URL — extract the batch code if so
+            let code = decodedText.trim();
+            try {
+              const url = new URL(decodedText);
+              code = url.searchParams.get('scan') || code;
+            } catch { /* not a URL, use raw text */ }
+            lookupMutation.mutate(code);
           }).catch(err => console.error("Failed to stop scanner", err));
         },
         (errorMessage) => {
