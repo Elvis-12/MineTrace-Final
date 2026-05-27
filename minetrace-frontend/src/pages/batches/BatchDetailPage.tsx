@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
 import { Truck, QrCode, ShieldAlert, Download, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
-import { QRCodeCanvas } from 'qrcode.react';
 import StatusBadge from '../../components/ui/StatusBadge';
 import RiskBadge from '../../components/ui/RiskBadge';
 import Modal from '../../components/ui/Modal';
@@ -32,7 +31,7 @@ const movementSchema = z.object({
 
 const verificationSchema = z.object({
   checkpoint: z.string().min(2, 'Checkpoint location is required'),
-  passed: z.boolean(),
+  passed: z.preprocess(val => val === 'true' || val === true, z.boolean()),
   remarks: z.string().optional(),
 });
 
@@ -49,7 +48,6 @@ export default function BatchDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const qrRef = useRef<HTMLCanvasElement>(null);
 
   const [activeTab, setActiveTab] = useState<'movements' | 'verifications' | 'audit'>('movements');
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
@@ -133,13 +131,11 @@ export default function BatchDetailPage() {
   const overrideForm = useForm<OverrideForm>({ resolver: zodResolver(overrideSchema) });
 
   const downloadQR = () => {
-    if (qrRef.current && batch) {
-      const url = qrRef.current.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `${batch.batchCode}-QR.png`;
-      link.href = url;
-      link.click();
-    }
+    if (!batch) return;
+    const link = document.createElement('a');
+    link.download = `${batch.batchCode}-QR.png`;
+    link.href = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/batches/${batch.id}/qr`;
+    link.click();
   };
 
   if (isLoadingBatch) {
@@ -230,7 +226,11 @@ export default function BatchDetailPage() {
           
           <div className="flex flex-col items-center justify-center bg-gray-50 p-6 rounded-xl border border-gray-100 min-w-[240px]">
             <div className="bg-white p-3 rounded-lg shadow-sm mb-4">
-              <QRCodeCanvas ref={qrRef} value={`${import.meta.env.VITE_APP_URL || window.location.origin}/verification?scan=${batch.batchCode}`} size={160} level="H" includeMargin={true} />
+              {batch.qrCodeData ? (
+                <img src={batch.qrCodeData} alt={`QR code for ${batch.batchCode}`} width={160} height={160} />
+              ) : (
+                <div className="w-[160px] h-[160px] flex items-center justify-center text-gray-400 text-xs text-center">QR not available</div>
+              )}
             </div>
             <button
               onClick={downloadQR}
