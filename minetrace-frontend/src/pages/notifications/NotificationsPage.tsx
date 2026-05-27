@@ -9,7 +9,7 @@ import { cn } from '../../lib/utils';
 
 export default function NotificationsPage() {
   const queryClient = useQueryClient();
-  const { decrementCount, resetCount } = useNotificationStore();
+  const { decrementUnread, setUnreadCount } = useNotificationStore();
 
   const { data: notificationsData, isLoading } = useQuery({
     queryKey: ['notifications'],
@@ -20,7 +20,7 @@ export default function NotificationsPage() {
     mutationFn: (id: string) => notificationApi.markAsRead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      decrementCount();
+      decrementUnread();
     },
   });
 
@@ -28,7 +28,7 @@ export default function NotificationsPage() {
     mutationFn: () => notificationApi.markAllAsRead(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      resetCount();
+      setUnreadCount(0);
       toast.success('All notifications marked as read');
     },
   });
@@ -84,7 +84,7 @@ export default function NotificationsPage() {
                 key={notification.id} 
                 className={cn(
                   "p-6 transition-colors hover:bg-gray-50",
-                  !notification.isRead ? "bg-primary-50/50" : ""
+                  !notification.read ? "bg-primary-50/50" : ""
                 )}
               >
                 <div className="flex gap-4">
@@ -94,7 +94,7 @@ export default function NotificationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className={cn("text-sm font-medium", !notification.isRead ? "text-gray-900" : "text-gray-700")}>
+                        <p className={cn("text-sm font-medium", !notification.read ? "text-gray-900" : "text-gray-700")}>
                           {notification.title}
                         </p>
                         <p className="mt-1 text-sm text-gray-500">
@@ -104,9 +104,9 @@ export default function NotificationsPage() {
                       <div className="flex flex-col items-end gap-2 flex-shrink-0">
                         <span className="text-xs text-gray-400 flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {formatDate(notification.createdAt)}
+                          {formatDate(notification.timestamp)}
                         </span>
-                        {!notification.isRead && (
+                        {!notification.read && (
                           <button
                             onClick={() => markAsReadMutation.mutate(notification.id)}
                             className="text-xs font-medium text-primary-600 hover:text-primary-800"

@@ -12,14 +12,14 @@ export const notificationApi = {
     }
     return api.get('/api/notifications');
   },
-  markRead: async (id: string) => {
+  markAsRead: async (id: string) => {
     if (USE_MOCK) {
       await delay(200);
       return { data: { success: true } };
     }
     return api.patch(`/api/notifications/${id}/read`);
   },
-  markAllRead: async () => {
+  markAllAsRead: async () => {
     if (USE_MOCK) {
       await delay(400);
       return { data: { success: true } };
