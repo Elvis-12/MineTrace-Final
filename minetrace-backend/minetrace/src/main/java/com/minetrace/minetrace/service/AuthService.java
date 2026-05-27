@@ -24,7 +24,6 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
-    private final NotificationRepository notificationRepository;
     private final BatchRepository batchRepository;
 
     private final JwtUtil jwtUtil;
