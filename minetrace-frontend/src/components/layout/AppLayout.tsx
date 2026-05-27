@@ -1,12 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import { notificationApi } from '../../api/notificationApi';
-import { useNotificationStore } from '../../store/notificationStore';
-import { useAuthStore } from '../../store/authStore';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,26 +17,6 @@ const queryClient = new QueryClient({
 
 export default function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { setUnreadCount } = useNotificationStore();
-  const { isAuthenticated } = useAuthStore();
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const fetchNotifications = async () => {
-      try {
-        const res = await notificationApi.getUnreadCount();
-        setUnreadCount(res.data.count);
-      } catch (error) {
-        console.error('Failed to fetch notifications count', error);
-      }
-    };
-
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000); // Poll every 60s
-
-    return () => clearInterval(interval);
-  }, [isAuthenticated, setUnreadCount]);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -56,6 +56,9 @@ public class Batch {
     @Column
     private String overrideNote;
 
+    @Column(columnDefinition = "TEXT")
+    private String qrCodeData;
+
     // Inspector compliance fields
     @Column
     private Boolean inspectorApproved;

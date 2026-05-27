@@ -5,7 +5,6 @@ import com.minetrace.minetrace.dto.VerificationResponse;
 import com.minetrace.minetrace.entity.User;
 import com.minetrace.minetrace.service.AuditLogService;
 import com.minetrace.minetrace.service.AuthService;
-import com.minetrace.minetrace.service.NotificationService;
 import com.minetrace.minetrace.service.VerificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -23,8 +22,6 @@ public class VerificationController {
     private final VerificationService verificationService;
     private final AuthService authService;
     private final AuditLogService auditLogService;
-    private final NotificationService notificationService;
-
     @PostMapping
     public ResponseEntity<VerificationResponse> create(@Valid @RequestBody VerificationRequest request,
                                                         @AuthenticationPrincipal UserDetails userDetails,
@@ -34,11 +31,6 @@ public class VerificationController {
         auditLogService.log("VERIFICATION_RECORDED", "Verification", response.getId(), currentUser,
                 httpRequest.getRemoteAddr(),
                 "Verification at " + request.getCheckpoint() + " - passed: " + request.getPassed());
-        if (!request.getPassed()) {
-            notificationService.createForAllUsers("VERIFICATION_FAILED", "Verification Failed",
-                    "Batch verification failed at checkpoint: " + request.getCheckpoint(),
-                    "Verification", response.getId());
-        }
         return ResponseEntity.ok(response);
     }
 }

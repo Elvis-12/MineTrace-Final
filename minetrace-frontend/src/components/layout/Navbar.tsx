@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { Menu, Bell, Search, User as UserIcon, LogOut } from 'lucide-react';
+import { Menu, Search, User as UserIcon, LogOut } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-import { useNotificationStore } from '../../store/notificationStore';
 import { ROUTES } from '../../constants/routes';
 import { batchApi } from '../../api/batchApi';
 import { useQuery } from '@tanstack/react-query';
@@ -15,8 +14,6 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const { unreadCount } = useNotificationStore();
-  
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -62,7 +59,6 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     if (path === ROUTES.VERIFICATION) return 'Batch Verification';
     if (path === ROUTES.FRAUD) return 'Fraud & Risk Analysis';
     if (path === ROUTES.REPORTS) return 'Reports';
-    if (path === ROUTES.NOTIFICATIONS) return 'Notifications';
     if (path === ROUTES.AUDIT_LOGS) return 'Audit Logs';
     if (path === ROUTES.PROFILE) return 'Profile & Settings';
     return 'MineTrace';
@@ -133,17 +129,6 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             </div>
           )}
         </div>
-
-        {/* Notifications */}
-        <Link 
-          to={ROUTES.NOTIFICATIONS}
-          className="relative p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <Bell className="h-6 w-6" />
-          {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-          )}
-        </Link>
 
         {/* Profile Dropdown */}
         <div className="relative" ref={profileRef}>

@@ -7,7 +7,6 @@ import com.minetrace.minetrace.repository.OrganizationRepository;
 import com.minetrace.minetrace.repository.UserRepository;
 import com.minetrace.minetrace.security.JwtUtil;
 import com.minetrace.minetrace.repository.BatchRepository;
-import com.minetrace.minetrace.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +26,7 @@ public class AuthService {
     private final OrganizationRepository organizationRepository;
     private final NotificationRepository notificationRepository;
     private final BatchRepository batchRepository;
+
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -145,10 +145,6 @@ public class AuthService {
                 .findFirst()
                 .ifPresent(admin -> batchRepository.findByCreatedBy(user)
                         .forEach(b -> { b.setCreatedBy(admin); batchRepository.save(b); }));
-
-        // Remove notifications owned by this user
-        notificationRepository.findByUserIdOrderByTimestampDesc(id)
-                .forEach(n -> notificationRepository.deleteById(n.getId()));
 
         userRepository.deleteById(id);
     }

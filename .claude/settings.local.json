@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw.cmd spring-boot:run)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :8086)",
+      "Bash(findstr LISTENING)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8086/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@minetrace.com\",\"password\":\"wrong\"}')",
+      "Bash(cmd //c \"taskkill /PID 15820 /F\")",
+      "Bash(findstr \":8082\")",
+      "Bash(tasklist /FI \"PID eq 25512\")",
+      "Bash(curl -s http://localhost:8082/api/auth/login -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"email\\\\\":\\\\\"admin@minetrace.com\\\\\",\\\\\"password\\\\\":\\\\\"Admin@123\\\\\"}\")"
+    ]
+  }
+}

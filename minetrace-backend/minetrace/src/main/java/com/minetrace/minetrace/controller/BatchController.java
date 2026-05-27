@@ -5,10 +5,13 @@ import com.minetrace.minetrace.entity.User;
 import com.minetrace.minetrace.service.AuditLogService;
 import com.minetrace.minetrace.service.AuthService;
 import com.minetrace.minetrace.service.BatchService;
+import com.minetrace.minetrace.service.QrCodeService;
 import com.minetrace.minetrace.service.VerificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,6 +30,7 @@ public class BatchController {
     private final VerificationService verificationService;
     private final AuthService authService;
     private final AuditLogService auditLogService;
+    private final QrCodeService qrCodeService;
 
     @GetMapping
     public ResponseEntity<List<BatchResponse>> getAll(
@@ -123,5 +127,19 @@ public class BatchController {
     @GetMapping("/{batchId}/verifications")
     public ResponseEntity<List<VerificationResponse>> getVerifications(@PathVariable String batchId) {
         return ResponseEntity.ok(verificationService.getByBatchId(batchId));
+    }
+
+    @GetMapping("/{id}/qr")
+    public ResponseEntity<byte[]> downloadQr(@PathVariable String id) {
+        BatchResponse batch = batchService.getById(id);
+        String verificationUrl = System.getenv("FRONTEND_URL") != null
+                ? System.getenv("FRONTEND_URL") : "http://localhost:5173";
+        verificationUrl += "/verification?scan=" + batch.getBatchCode();
+        byte[] png = qrCodeService.generatePngBytes(verificationUrl);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + batch.getBatchCode() + "-QR.png\"")
+                .body(png);
     }
 }

@@ -34,6 +34,10 @@ public class BatchService {
     private final MineRepository mineRepository;
     private final MovementRepository movementRepository;
     private final VerificationRepository verificationRepository;
+    private final QrCodeService qrCodeService;
+
+    private static final String FRONTEND_URL = System.getenv("FRONTEND_URL") != null
+            ? System.getenv("FRONTEND_URL") : "http://localhost:5173";
 
     private static final String ML_SERVICE_URL = System.getenv("ML_SERVICE_URL") != null
             ? System.getenv("ML_SERVICE_URL") : "http://localhost:8000";
@@ -101,7 +105,12 @@ public class BatchService {
         batch.setAnomalyScore(0.0);
         batch.setFlags(new Batch.Flags());
 
-        return toResponse(batchRepository.save(batch));
+        Batch saved = batchRepository.save(batch);
+
+        String verificationUrl = FRONTEND_URL + "/verification?scan=" + saved.getBatchCode();
+        saved.setQrCodeData(qrCodeService.generateBase64Png(verificationUrl));
+
+        return toResponse(batchRepository.save(saved));
     }
 
     public BatchResponse update(Long id, BatchUpdateRequest request) {
@@ -357,6 +366,7 @@ public class BatchService {
                 batch.getAnomalyScore() != null ? batch.getAnomalyScore() : 0.0,
                 flagsDto,
                 batch.getOverrideNote(),
+                batch.getQrCodeData(),
                 batch.getInspectorApproved(),
                 batch.getInspectorNote(),
                 batch.getInspectedBy() != null ? batch.getInspectedBy().getFullName() : null,

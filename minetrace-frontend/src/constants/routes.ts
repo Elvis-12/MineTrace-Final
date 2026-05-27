@@ -10,7 +10,6 @@ export const ROUTES = {
   VERIFICATION: '/verification',
   FRAUD: '/fraud',
   REPORTS: '/reports',
-  NOTIFICATIONS: '/notifications',
   AUDIT_LOGS: '/audit-logs',
   PROFILE: '/profile',
   UNAUTHORIZED: '/unauthorized',

@@ -6,7 +6,6 @@ import com.minetrace.minetrace.entity.User;
 import com.minetrace.minetrace.service.AuditLogService;
 import com.minetrace.minetrace.service.AuthService;
 import com.minetrace.minetrace.service.MovementService;
-import com.minetrace.minetrace.service.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +27,6 @@ public class MovementController {
     private final MovementService movementService;
     private final AuthService authService;
     private final AuditLogService auditLogService;
-    private final NotificationService notificationService;
-
     @GetMapping
     public ResponseEntity<List<MovementResponse>> getAll(
             @RequestParam(required = false) String batchId) {
@@ -45,12 +42,6 @@ public class MovementController {
         auditLogService.log("MOVEMENT_RECORDED", "Movement", response.getId(), currentUser,
                 httpRequest.getRemoteAddr(),
                 "Movement " + response.getEventType() + " recorded for batch " + response.getBatchCode());
-        if ("DISPATCH".equals(response.getEventType())) {
-            notificationService.createForAllUsers("BATCH_DISPATCHED", "Batch Dispatched",
-                    "Batch " + response.getBatchCode() + " dispatched from " + response.getFromLocation()
-                            + " to " + response.getToLocation(),
-                    "Movement", response.getId());
-        }
         return ResponseEntity.ok(response);
     }
 
