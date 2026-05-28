@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -129,12 +130,13 @@ export default function BatchDetailPage() {
   const movementForm = useForm<MovementForm>({ resolver: zodResolver(movementSchema), defaultValues: { eventType: 'DISPATCH' } });
   const verifyForm = useForm<VerificationForm>({ resolver: zodResolver(verificationSchema), defaultValues: { passed: true } });
   const overrideForm = useForm<OverrideForm>({ resolver: zodResolver(overrideSchema) });
+  const qrRef = useRef<HTMLCanvasElement>(null);
 
   const downloadQR = () => {
-    if (!batch) return;
+    if (!qrRef.current || !batch) return;
     const link = document.createElement('a');
     link.download = `${batch.batchCode}-QR.png`;
-    link.href = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/batches/${batch.id}/qr`;
+    link.href = qrRef.current.toDataURL('image/png');
     link.click();
   };
 
@@ -226,11 +228,13 @@ export default function BatchDetailPage() {
           
           <div className="flex flex-col items-center justify-center bg-gray-50 p-6 rounded-xl border border-gray-100 min-w-[240px]">
             <div className="bg-white p-3 rounded-lg shadow-sm mb-4">
-              {batch.qrCodeData ? (
-                <img src={batch.qrCodeData} alt={`QR code for ${batch.batchCode}`} width={160} height={160} />
-              ) : (
-                <div className="w-[160px] h-[160px] flex items-center justify-center text-gray-400 text-xs text-center">QR not available</div>
-              )}
+              <QRCodeCanvas
+                ref={qrRef}
+                value={`${window.location.origin}/verification?scan=${batch.batchCode}`}
+                size={160}
+                level="H"
+                includeMargin={true}
+              />
             </div>
             <button
               onClick={downloadQR}
