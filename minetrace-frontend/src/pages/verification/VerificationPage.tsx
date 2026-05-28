@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import toast from 'react-hot-toast';
-import { QrCode, Keyboard, Loader2, CheckCircle, AlertTriangle, XCircle, ArrowRight } from 'lucide-react';
+import { QrCode, Keyboard, Loader2, CheckCircle, AlertTriangle, XCircle, ShieldCheck, ShieldX } from 'lucide-react';
 import { batchApi } from '../../api/batchApi';
 import { verificationApi } from '../../api/verificationApi';
 import { useAuthStore } from '../../store/authStore';
@@ -21,16 +21,23 @@ export default function VerificationPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
 
+  // Inspect action state
+  const [inspectMode, setInspectMode] = useState<'approve' | 'flag' | null>(null);
+  const [inspectNote, setInspectNote] = useState('');
+  const [inspectDone, setInspectDone] = useState(false);
+
   const lookupMutation = useMutation({
-    mutationFn: (code: string) => batchApi.getById(code), // Assuming getById can take batchCode
+    mutationFn: (code: string) => batchApi.getById(code),
     onSuccess: (res) => {
       setScannedBatch(res.data);
       setScanError(null);
-      // Auto-log verification
+      setInspectMode(null);
+      setInspectNote('');
+      setInspectDone(false);
       logVerificationMutation.mutate({
         batchId: res.data.id,
-        checkpoint: 'QR Scan Checkpoint', // In a real app, this might be selected or derived from user location
-        passed: res.data.riskLevel !== 'HIGH' && res.data.riskLevel !== 'FLAGGED',
+        checkpoint: 'Inspector QR Scan',
+        passed: res.data.riskLevel !== 'HIGH' && res.data.status !== 'FLAGGED',
       });
     },
     onError: () => {
@@ -41,12 +48,20 @@ export default function VerificationPage() {
 
   const logVerificationMutation = useMutation({
     mutationFn: (data: any) => verificationApi.verify({ ...data, verifiedBy: user?.fullName }),
-    onSuccess: () => {
-      toast.success('Verification logged automatically');
-    },
   });
 
-  // Auto-lookup when page is opened via QR code link (?scan=BATCH_CODE)
+  const inspectMutation = useMutation({
+    mutationFn: ({ approved, note }: { approved: boolean; note: string }) =>
+      batchApi.inspect(scannedBatch.id, approved, note),
+    onSuccess: (_, { approved }) => {
+      toast.success(approved ? 'Batch approved successfully' : 'Batch flagged for compliance');
+      setInspectDone(true);
+      setInspectMode(null);
+      setScannedBatch((prev: any) => ({ ...prev, inspectorApproved: approved, inspectorNote: inspectNote }));
+    },
+    onError: () => toast.error('Action failed. Please try again.'),
+  });
+
   useEffect(() => {
     const code = searchParams.get('scan');
     if (code) {
@@ -62,30 +77,25 @@ export default function VerificationPage() {
     if (activeTab === 'scan') {
       html5QrCode = new Html5Qrcode("reader");
       setIsScanning(true);
-      
+
       html5QrCode.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
-          // Stop scanning once we get a result
           html5QrCode.stop().then(() => {
             setIsScanning(false);
-            // QR may contain a full URL — extract the batch code if so
             let code = decodedText.trim();
             try {
               const url = new URL(decodedText);
               code = url.searchParams.get('scan') || code;
-            } catch { /* not a URL, use raw text */ }
+            } catch { /* not a URL */ }
             lookupMutation.mutate(code);
           }).catch(err => console.error("Failed to stop scanner", err));
         },
-        (errorMessage) => {
-          // Ignore continuous scanning errors
-        }
-      ).catch((err) => {
+        () => {}
+      ).catch(() => {
         setIsScanning(false);
         setScanError("Camera access denied or not available.");
-        console.error("Camera start error", err);
       });
     }
 
@@ -98,23 +108,35 @@ export default function VerificationPage() {
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (batchCode.trim()) {
-      lookupMutation.mutate(batchCode.trim());
-    }
+    if (batchCode.trim()) lookupMutation.mutate(batchCode.trim());
   };
 
   const resetScanner = () => {
     setScannedBatch(null);
     setScanError(null);
     setBatchCode('');
-    setActiveTab('scan'); // This will trigger the useEffect to restart the camera
+    setInspectMode(null);
+    setInspectNote('');
+    setInspectDone(false);
+    setActiveTab('scan');
   };
+
+  const handleInspect = () => {
+    if (!inspectMode) return;
+    if (inspectMode === 'flag' && !inspectNote.trim()) {
+      toast.error('A reason is required when flagging a batch');
+      return;
+    }
+    inspectMutation.mutate({ approved: inspectMode === 'approve', note: inspectNote });
+  };
+
+  const alreadyInspected = scannedBatch?.inspectorApproved !== null && scannedBatch?.inspectorApproved !== undefined;
 
   return (
     <div className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center py-8">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Batch Verification</h1>
-        <p className="text-gray-500">Scan a QR code or enter a batch code to verify authenticity</p>
+        <p className="text-gray-500">Scan a QR code or enter a batch code to verify and inspect</p>
       </div>
 
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
@@ -128,8 +150,7 @@ export default function VerificationPage() {
                 activeTab === 'scan' ? "bg-primary-50 text-primary-700 border-b-2 border-primary-600" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               )}
             >
-              <QrCode className="h-5 w-5" />
-              Scan QR Code
+              <QrCode className="h-5 w-5" /> Scan QR Code
             </button>
             <button
               onClick={() => setActiveTab('manual')}
@@ -138,8 +159,7 @@ export default function VerificationPage() {
                 activeTab === 'manual' ? "bg-primary-50 text-primary-700 border-b-2 border-primary-600" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               )}
             >
-              <Keyboard className="h-5 w-5" />
-              Enter Batch Code
+              <Keyboard className="h-5 w-5" /> Enter Batch Code
             </button>
           </div>
         )}
@@ -156,13 +176,8 @@ export default function VerificationPage() {
               </div>
               <p className="mt-6 text-sm text-gray-500 flex items-center gap-2">
                 {isScanning ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Position QR code within the frame
-                  </>
-                ) : (
-                  "Initializing camera..."
-                )}
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Position QR code within the frame</>
+                ) : "Initializing camera..."}
               </p>
             </div>
           )}
@@ -171,10 +186,8 @@ export default function VerificationPage() {
           {!scannedBatch && !scanError && activeTab === 'manual' && (
             <form onSubmit={handleManualSubmit} className="flex flex-col items-center py-8">
               <div className="w-full max-w-sm">
-                <label htmlFor="batchCode" className="sr-only">Batch Code</label>
                 <input
                   type="text"
-                  id="batchCode"
                   value={batchCode}
                   onChange={(e) => setBatchCode(e.target.value)}
                   placeholder="e.g. MT-2026-001"
@@ -184,7 +197,7 @@ export default function VerificationPage() {
                 <button
                   type="submit"
                   disabled={!batchCode.trim() || lookupMutation.isPending}
-                  className="mt-4 w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 transition-colors"
+                  className="mt-4 w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors"
                 >
                   {lookupMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Verify Batch'}
                 </button>
@@ -200,10 +213,7 @@ export default function VerificationPage() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Verification Failed</h2>
               <p className="text-gray-500 mb-8">{scanError}</p>
-              <button
-                onClick={resetScanner}
-                className="inline-flex justify-center py-3 px-6 border border-transparent text-sm font-medium rounded-xl text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900"
-              >
+              <button onClick={resetScanner} className="inline-flex justify-center py-3 px-6 border border-transparent text-sm font-medium rounded-xl text-white bg-gray-900 hover:bg-gray-800">
                 Scan Another Code
               </button>
             </div>
@@ -212,11 +222,12 @@ export default function VerificationPage() {
           {/* Success State */}
           {scannedBatch && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {/* Risk banner */}
               {scannedBatch.riskLevel === 'HIGH' || scannedBatch.status === 'FLAGGED' ? (
                 <div className="bg-red-50 border-2 border-red-500 rounded-xl p-6 mb-6 text-center shadow-sm">
                   <AlertTriangle className="h-12 w-12 text-red-600 mx-auto mb-3" />
                   <h2 className="text-2xl font-bold text-red-800 mb-1">FLAGGED — HIGH RISK BATCH</h2>
-                  <p className="text-red-600 font-medium">This batch has failed security checks and requires immediate impoundment.</p>
+                  <p className="text-red-600 font-medium">This batch has failed security checks and requires immediate review.</p>
                 </div>
               ) : (
                 <div className="bg-green-50 border-2 border-green-500 rounded-xl p-6 mb-6 text-center shadow-sm">
@@ -226,7 +237,8 @@ export default function VerificationPage() {
                 </div>
               )}
 
-              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+              {/* Batch details */}
+              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 mb-6">
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Batch Code</p>
@@ -238,7 +250,7 @@ export default function VerificationPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Mineral Type</p>
                     <p className="font-medium text-gray-900">{scannedBatch.mineralType}</p>
@@ -254,35 +266,84 @@ export default function VerificationPage() {
                 </div>
 
                 <div className="border-t border-gray-200 pt-4">
-                  <p className="text-xs text-gray-500 mb-2">Registration Date</p>
+                  <p className="text-xs text-gray-500 mb-1">Registration Date</p>
                   <p className="text-sm font-medium text-gray-900">{formatDate(scannedBatch.createdAt)}</p>
-                </div>
-
-                {/* Inspector Compliance Status */}
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <p className="text-xs text-gray-500 mb-2">Inspector Compliance</p>
-                  {scannedBatch.inspectorApproved === true && (
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-700">Approved by {scannedBatch.inspectedBy || 'Inspector'}</span>
-                    </div>
-                  )}
-                  {scannedBatch.inspectorApproved === false && (
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-red-600" />
-                      <span className="text-sm font-medium text-red-700">Flagged by {scannedBatch.inspectedBy || 'Inspector'}</span>
-                    </div>
-                  )}
-                  {scannedBatch.inspectorApproved === null || scannedBatch.inspectorApproved === undefined ? (
-                    <span className="text-sm text-gray-400 italic">Pending inspector review</span>
-                  ) : null}
                 </div>
               </div>
 
-              <div className="mt-8 flex justify-center">
+              {/* Inspector Compliance Action */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">Inspector Decision</h3>
+
+                {inspectDone || alreadyInspected ? (
+                  <div className={cn(
+                    "flex items-center gap-3 p-4 rounded-lg",
+                    scannedBatch.inspectorApproved ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                  )}>
+                    {scannedBatch.inspectorApproved
+                      ? <><ShieldCheck className="h-5 w-5" /><span className="font-medium">Batch Approved</span></>
+                      : <><ShieldX className="h-5 w-5" /><span className="font-medium">Batch Flagged for Compliance</span></>
+                    }
+                    {scannedBatch.inspectorNote && (
+                      <span className="text-sm ml-1">— {scannedBatch.inspectorNote}</span>
+                    )}
+                  </div>
+                ) : inspectMode ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-600">
+                      {inspectMode === 'approve'
+                        ? 'Add an optional compliance note before approving.'
+                        : 'Describe the compliance issue found (required).'}
+                    </p>
+                    <textarea
+                      rows={3}
+                      value={inspectNote}
+                      onChange={e => setInspectNote(e.target.value)}
+                      placeholder={inspectMode === 'approve' ? 'Compliance note (optional)...' : 'Reason for flagging (required)...'}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setInspectMode(null)}
+                        className="flex-1 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleInspect}
+                        disabled={inspectMutation.isPending || (inspectMode === 'flag' && !inspectNote.trim())}
+                        className={cn(
+                          "flex-1 py-2 text-sm text-white rounded-lg disabled:opacity-50 flex items-center justify-center gap-2",
+                          inspectMode === 'approve' ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+                        )}
+                      >
+                        {inspectMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {inspectMode === 'approve' ? 'Confirm Approval' : 'Confirm Flag'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setInspectMode('approve')}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                    >
+                      <ShieldCheck className="h-4 w-4" /> Approve Batch
+                    </button>
+                    <button
+                      onClick={() => setInspectMode('flag')}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                    >
+                      <ShieldX className="h-4 w-4" /> Flag Batch
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-center">
                 <button
                   onClick={resetScanner}
-                  className="inline-flex justify-center py-3 px-8 border border-transparent text-sm font-medium rounded-xl text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 shadow-sm"
+                  className="inline-flex justify-center py-3 px-8 border border-transparent text-sm font-medium rounded-xl text-white bg-primary-600 hover:bg-primary-700 shadow-sm"
                 >
                   Scan Next Batch
                 </button>

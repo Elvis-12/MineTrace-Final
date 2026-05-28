@@ -58,6 +58,7 @@ export default function AppRouter() {
 
             <Route element={<RoleRoute allowedRoles={['INSPECTOR', 'ADMIN']} />}>
               <Route path={ROUTES.INSPECTOR_DASHBOARD} element={<InspectorDashboardPage />} />
+              <Route path={ROUTES.VERIFICATION} element={<VerificationPage />} />
             </Route>
 
             <Route element={<RoleRoute allowedRoles={['ADMIN', 'SUPPLY_OFFICER']} />}>
@@ -65,9 +66,8 @@ export default function AppRouter() {
               <Route path={ROUTES.REPORTS} element={<ReportsPage />} />
             </Route>
 
-            {/* Accessible by all authenticated users, but specific actions inside might be gated */}
+            {/* Accessible by all authenticated users */}
             <Route path="/batches/:id" element={<BatchDetailPage />} />
-            <Route path={ROUTES.VERIFICATION} element={<VerificationPage />} />
             <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
             
             <Route path={ROUTES.UNAUTHORIZED} element={<UnauthorizedPage />} />
