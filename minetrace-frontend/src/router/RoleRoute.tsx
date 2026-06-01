@@ -8,9 +8,13 @@ interface RoleRouteProps {
 }
 
 export default function RoleRoute({ allowedRoles }: RoleRouteProps) {
-  const { user } = useAuthStore();
+  const { user, hasHydrated } = useAuthStore();
 
-  if (!user || !allowedRoles.includes(user.role as Role)) {
+  if (!hasHydrated) {
+    return null;
+  }
+
+  if (!user || !allowedRoles.some(r => r === user.role)) {
     return <Navigate to={ROUTES.UNAUTHORIZED} replace />;
   }
 

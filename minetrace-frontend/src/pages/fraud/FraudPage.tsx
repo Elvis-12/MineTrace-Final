@@ -59,7 +59,8 @@ export default function FraudPage() {
   ];
 
   const columns: Column<any>[] = [
-    { 
+    { key: '_index', label: '#', render: (_row: any, index: number) => <span className="text-gray-400">{index + 1}</span> },
+    {
       key: 'batchCode', 
       label: 'Batch Code', 
       sortable: true,

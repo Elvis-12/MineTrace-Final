@@ -21,4 +21,5 @@ public class BatchRequest {
     private String mineName;
     private String createdBy;
     private String notes;
+    private String destination;
 }

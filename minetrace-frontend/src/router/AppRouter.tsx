@@ -23,6 +23,7 @@ const ProfilePage = lazy(() => import('../pages/profile/ProfilePage'));
 const NotFoundPage = lazy(() => import('../pages/errors/NotFoundPage'));
 const UnauthorizedPage = lazy(() => import('../pages/errors/UnauthorizedPage'));
 const InspectorDashboardPage = lazy(() => import('../pages/inspector/InspectorDashboardPage'));
+const NotificationsPage = lazy(() => import('../pages/notifications/NotificationsPage'));
 
 const PageLoader = () => (
   <div className="flex h-[50vh] items-center justify-center">
@@ -69,6 +70,7 @@ export default function AppRouter() {
             {/* Accessible by all authenticated users */}
             <Route path="/batches/:id" element={<BatchDetailPage />} />
             <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
+            <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
             
             <Route path={ROUTES.UNAUTHORIZED} element={<UnauthorizedPage />} />
             <Route path="*" element={<NotFoundPage />} />

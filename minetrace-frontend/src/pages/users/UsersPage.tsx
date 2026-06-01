@@ -152,6 +152,7 @@ export default function UsersPage() {
   };
 
   const columns: Column<any>[] = [
+    { key: '_index', label: '#', render: (_row: any, index: number) => <span className="text-gray-400">{index + 1}</span> },
     { key: 'fullName', label: 'Full Name', sortable: true },
     { key: 'email', label: 'Email', sortable: true },
     { 

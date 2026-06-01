@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { Menu, Search, User as UserIcon, LogOut } from 'lucide-react';
+import { Menu, Search, User as UserIcon, LogOut, Bell } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { ROUTES } from '../../constants/routes';
 import { batchApi } from '../../api/batchApi';
+import { notificationApi } from '../../api/notificationApi';
 import { useQuery } from '@tanstack/react-query';
 
 interface NavbarProps {
@@ -32,6 +33,13 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     queryFn: () => batchApi.getAll({ search: debouncedSearch }),
     enabled: debouncedSearch.length > 2,
   });
+
+  const { data: countData } = useQuery({
+    queryKey: ['notificationCount'],
+    queryFn: () => notificationApi.getUnreadCount(),
+    refetchInterval: 30000,
+  });
+  const unreadCount: number = countData?.data?.count ?? 0;
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -108,8 +116,8 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             <div className="absolute mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50 max-h-60 overflow-y-auto">
               {isSearchLoading ? (
                 <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
-              ) : searchResults?.data?.length > 0 ? (
-                searchResults.data.map((batch: any) => (
+              ) : (searchResults?.data?.length ?? 0) > 0 ? (
+                (searchResults?.data ?? []).map((batch: any) => (
                   <button
                     key={batch.id}
                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
@@ -129,6 +137,16 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             </div>
           )}
         </div>
+
+        {/* Notification Bell */}
+        <Link to={ROUTES.NOTIFICATIONS} className="relative p-1.5 text-gray-500 hover:text-gray-700 focus:outline-none">
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </Link>
 
         {/* Profile Dropdown */}
         <div className="relative" ref={profileRef}>

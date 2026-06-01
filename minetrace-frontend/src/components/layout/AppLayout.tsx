@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,11 +16,12 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function AppLayout() {
+function AppContent() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  useWebSocket();
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
       <div className="flex h-screen overflow-hidden bg-content">
         <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
         
@@ -50,6 +52,14 @@ export default function AppLayout() {
           },
         }}
       />
+    </>
+  );
+}
+
+export default function AppLayout() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
     </QueryClientProvider>
   );
 }

@@ -10,6 +10,7 @@ import { Truck, QrCode, ShieldAlert, Download, CheckCircle, XCircle, AlertTriang
 import StatusBadge from '../../components/ui/StatusBadge';
 import RiskBadge from '../../components/ui/RiskBadge';
 import Modal from '../../components/ui/Modal';
+import LocationSelect from '../../components/ui/LocationSelect';
 import DataTable, { Column } from '../../components/ui/DataTable';
 import { batchApi } from '../../api/batchApi';
 import { movementApi } from '../../api/movementApi';
@@ -80,7 +81,8 @@ export default function BatchDetailPage() {
   
   // Role checks
   const isAdmin = user?.role === 'ADMIN';
-  const canRecordMovement = isAdmin || user?.role === 'SUPPLY_OFFICER';
+  const isMineOfficer = user?.role === 'MINE_OFFICER';
+  const canRecordMovement = isAdmin || user?.role === 'SUPPLY_OFFICER' || isMineOfficer;
   const canVerify = isAdmin || user?.role === 'INSPECTOR';
 
   // Mutations
@@ -214,6 +216,10 @@ export default function BatchDetailPage() {
               <div>
                 <p className="text-sm font-medium text-gray-500 mb-1">Extraction Date</p>
                 <p className="text-base font-semibold text-gray-900">{formatDate(batch.extractionDate).split(' ')[0]}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">Destination</p>
+                <p className="text-base font-semibold text-gray-900">{batch.destination || '—'}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500 mb-1">Registered By</p>
@@ -524,32 +530,28 @@ export default function BatchDetailPage() {
               className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
             >
               <option value="DISPATCH">Dispatch</option>
-              <option value="RECEIVE">Receive</option>
-              <option value="STORAGE">Storage</option>
-              <option value="TRANSFER">Transfer</option>
-              <option value="SALE">Sale</option>
+              {!isMineOfficer && <option value="RECEIVE">Receive</option>}
+              {!isMineOfficer && <option value="STORAGE">Storage</option>}
+              {!isMineOfficer && <option value="TRANSFER">Transfer</option>}
+              {!isMineOfficer && <option value="SALE">Sale</option>}
             </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">From Location *</label>
-              <input
-                type="text"
-                {...movementForm.register('fromLocation')}
-                className={`mt-1 block w-full px-3 py-2 border ${movementForm.formState.errors.fromLocation ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
-              />
-              {movementForm.formState.errors.fromLocation && <p className="mt-1 text-sm text-red-600">{movementForm.formState.errors.fromLocation.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">To Location *</label>
-              <input
-                type="text"
-                {...movementForm.register('toLocation')}
-                className={`mt-1 block w-full px-3 py-2 border ${movementForm.formState.errors.toLocation ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
-              />
-              {movementForm.formState.errors.toLocation && <p className="mt-1 text-sm text-red-600">{movementForm.formState.errors.toLocation.message}</p>}
-            </div>
+            <LocationSelect
+              label="From Location"
+              required
+              value={movementForm.watch('fromLocation') || ''}
+              onChange={(val) => movementForm.setValue('fromLocation', val)}
+              error={movementForm.formState.errors.fromLocation?.message}
+            />
+            <LocationSelect
+              label="To Location"
+              required
+              value={movementForm.watch('toLocation') || ''}
+              onChange={(val) => movementForm.setValue('toLocation', val)}
+              error={movementForm.formState.errors.toLocation?.message}
+            />
           </div>
 
           <div>
@@ -621,15 +623,13 @@ export default function BatchDetailPage() {
         }
       >
         <form className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Checkpoint Location *</label>
-            <input
-              type="text"
-              {...verifyForm.register('checkpoint')}
-              className={`mt-1 block w-full px-3 py-2 border ${verifyForm.formState.errors.checkpoint ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
-            />
-            {verifyForm.formState.errors.checkpoint && <p className="mt-1 text-sm text-red-600">{verifyForm.formState.errors.checkpoint.message}</p>}
-          </div>
+          <LocationSelect
+            label="Checkpoint Location"
+            required
+            value={verifyForm.watch('checkpoint') || ''}
+            onChange={(val) => verifyForm.setValue('checkpoint', val)}
+            error={verifyForm.formState.errors.checkpoint?.message}
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Verification Result *</label>

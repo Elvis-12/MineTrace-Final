@@ -56,4 +56,9 @@ public class ReportController {
             @RequestParam(required = false) String endDate) {
         return ResponseEntity.ok(reportService.getRiskReport(startDate, endDate));
     }
+
+    @GetMapping("/stock-by-location")
+    public ResponseEntity<Map<String, Object>> getStockByLocation() {
+        return ResponseEntity.ok(reportService.getStockByLocation());
+    }
 }

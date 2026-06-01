@@ -34,9 +34,14 @@ public interface BatchRepository extends JpaRepository<Batch, Long> {
     @Query("SELECT b.mineralType, COALESCE(SUM(b.initialWeight), 0) FROM Batch b GROUP BY b.mineralType")
     List<Object[]> getMineralDistributionStats();
 
-    List<Batch> findByCreatedBy(User user);
+    @Query("SELECT b.mine.district, b.mine.province, COUNT(b), COALESCE(SUM(b.initialWeight), 0) FROM Batch b WHERE b.mine.district IS NOT NULL GROUP BY b.mine.district, b.mine.province ORDER BY b.mine.district")
+    List<Object[]> getStockByDistrictRaw();
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Batch b SET b.inspectedBy = null WHERE b.inspectedBy = :user")
     void clearInspectedBy(User user);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Batch b SET b.createdBy = :admin WHERE b.createdBy = :user")
+    void reassignCreatedBy(User user, User admin);
 }

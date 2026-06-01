@@ -63,4 +63,11 @@ export const reportApi = {
     }
     return api.get('/api/reports/risk', { params: filters });
   },
+  getStockByLocation: async () => {
+    if (USE_MOCK) {
+      await delay(400);
+      return { data: [] };
+    }
+    return api.get('/api/reports/stock-by-location');
+  },
 };

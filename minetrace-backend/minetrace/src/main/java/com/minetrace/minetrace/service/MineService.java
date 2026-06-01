@@ -38,7 +38,7 @@ public class MineService {
 
         Mine mine = new Mine();
         mine.setName(request.getName());
-        mine.setLocation(request.getLocation());
+        mine.setLocation(request.getDistrict());
         mine.setProvince(request.getProvince());
         mine.setDistrict(request.getDistrict());
         mine.setLicenseNumber(request.getLicenseNumber());
@@ -56,7 +56,7 @@ public class MineService {
                 .orElseThrow(() -> new RuntimeException("Organization not found"));
 
         mine.setName(request.getName());
-        mine.setLocation(request.getLocation());
+        mine.setLocation(request.getDistrict());
         mine.setProvince(request.getProvince());
         mine.setDistrict(request.getDistrict());
         mine.setLicenseNumber(request.getLicenseNumber());

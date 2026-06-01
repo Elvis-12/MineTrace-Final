@@ -23,6 +23,8 @@ public class BatchResponse {
     private FlagsDto flags;
     private String overrideNote;
 
+    private String destination;
+    private String analyzedAt;
     private String qrCodeData;
 
     // Inspector compliance fields

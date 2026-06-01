@@ -14,4 +14,5 @@ export const ROUTES = {
   PROFILE: '/profile',
   UNAUTHORIZED: '/unauthorized',
   INSPECTOR_DASHBOARD: '/inspector',
+  NOTIFICATIONS: '/notifications',
 };

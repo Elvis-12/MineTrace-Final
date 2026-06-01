@@ -135,15 +135,12 @@ public class AuthService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Null out inspector references in batches (nullable FK)
         batchRepository.clearInspectedBy(user);
 
-        // Reassign created_by to admin for any batches this user created
         userRepository.findByRole(User.Role.ADMIN).stream()
                 .filter(a -> !a.getId().equals(id))
                 .findFirst()
-                .ifPresent(admin -> batchRepository.findByCreatedBy(user)
-                        .forEach(b -> { b.setCreatedBy(admin); batchRepository.save(b); }));
+                .ifPresent(admin -> batchRepository.reassignCreatedBy(user, admin));
 
         userRepository.deleteById(id);
     }

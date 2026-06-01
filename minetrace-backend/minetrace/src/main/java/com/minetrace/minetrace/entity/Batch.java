@@ -50,8 +50,14 @@ public class Batch {
     @Column(nullable = false)
     private Double anomalyScore = 0.0;
 
+    @Column
+    private LocalDateTime analyzedAt;
+
     @Embedded
     private Flags flags = new Flags();
+
+    @Column
+    private String destination;
 
     @Column
     private String overrideNote;

@@ -104,6 +104,7 @@ public class BatchService {
         batch.setRiskLevel(Batch.RiskLevel.UNKNOWN);
         batch.setAnomalyScore(0.0);
         batch.setFlags(new Batch.Flags());
+        batch.setDestination(request.getDestination());
 
         Batch saved = batchRepository.save(batch);
 
@@ -271,6 +272,7 @@ public class BatchService {
         }
 
         batch.setRiskLevel(riskLevel);
+        batch.setAnalyzedAt(java.time.LocalDateTime.now());
         if (riskLevel == Batch.RiskLevel.HIGH) {
             batch.setStatus(Batch.Status.FLAGGED);
         }
@@ -366,6 +368,8 @@ public class BatchService {
                 batch.getAnomalyScore() != null ? batch.getAnomalyScore() : 0.0,
                 flagsDto,
                 batch.getOverrideNote(),
+                batch.getDestination(),
+                batch.getAnalyzedAt() != null ? batch.getAnalyzedAt().toString() : null,
                 batch.getQrCodeData(),
                 batch.getInspectorApproved(),
                 batch.getInspectorNote(),

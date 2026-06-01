@@ -7,6 +7,8 @@ import com.minetrace.minetrace.service.AuthService;
 import com.minetrace.minetrace.service.BatchService;
 import com.minetrace.minetrace.service.QrCodeService;
 import com.minetrace.minetrace.service.VerificationService;
+import com.minetrace.minetrace.service.WebSocketEventService;
+import com.minetrace.minetrace.service.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,8 @@ public class BatchController {
     private final AuthService authService;
     private final AuditLogService auditLogService;
     private final QrCodeService qrCodeService;
+    private final WebSocketEventService webSocketEventService;
+    private final NotificationService notificationService;
 
     @GetMapping
     public ResponseEntity<List<BatchResponse>> getAll(
@@ -87,6 +91,14 @@ public class BatchController {
         User currentUser = authService.getUserByEmail(userDetails.getUsername());
         auditLogService.log("BATCH_ANALYZED", "MineralBatch", String.valueOf(id), currentUser,
                 httpRequest.getRemoteAddr(), "Fraud analysis run on batch " + id);
+        webSocketEventService.broadcastFraudAnalyzed(String.valueOf(id));
+        BatchResponse analyzed = batchService.getById(String.valueOf(id));
+        if ("HIGH".equals(analyzed.getRiskLevel())) {
+            notificationService.createForAllAdmins(
+                    "HIGH_RISK", "High Risk Batch Detected",
+                    "Batch " + analyzed.getBatchCode() + " has been flagged as HIGH RISK. Immediate review required.",
+                    "MineralBatch", String.valueOf(id));
+        }
         return ResponseEntity.ok(Map.of("success", true));
     }
 
@@ -115,6 +127,15 @@ public class BatchController {
         auditLogService.log(approved ? "BATCH_APPROVED" : "BATCH_FLAGGED_INSPECTION",
                 "MineralBatch", String.valueOf(id), currentUser,
                 httpRequest.getRemoteAddr(), "Inspector " + (approved ? "approved" : "flagged") + " batch: " + note);
+        webSocketEventService.broadcastBatchUpdated(String.valueOf(id));
+        BatchResponse inspected = batchService.getById(String.valueOf(id));
+        String notifTitle = approved ? "Batch Approved by Inspector" : "Batch Flagged by Inspector";
+        String notifMsg = approved
+                ? "Batch " + inspected.getBatchCode() + " has been approved by inspector."
+                : "Batch " + inspected.getBatchCode() + " has been flagged by inspector: " + note;
+        notificationService.createForAllAdmins(
+                approved ? "BATCH_APPROVED" : "BATCH_FLAGGED",
+                notifTitle, notifMsg, "MineralBatch", String.valueOf(id));
         return ResponseEntity.ok(Map.of("success", true));
     }
 

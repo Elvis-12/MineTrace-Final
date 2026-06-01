@@ -106,6 +106,38 @@ public class ReportService {
         return Map.of("unverifiedBatches", unverified);
     }
 
+    public Map<String, Object> getStockByLocation() {
+        List<Object[]> raw = batchRepository.getStockByDistrictRaw();
+        List<Map<String, Object>> data = new ArrayList<>();
+
+        for (Object[] row : raw) {
+            String district  = (String) row[0];
+            String province  = (String) row[1];
+            long   batches   = ((Number) row[2]).longValue();
+            double totalWeight = ((Number) row[3]).doubleValue();
+
+            // Subtract weight of batches that have at least one DISPATCH movement
+            List<com.minetrace.minetrace.entity.Batch> districtBatches = batchRepository.findAll().stream()
+                    .filter(b -> district.equals(b.getMine() != null ? b.getMine().getDistrict() : null))
+                    .collect(java.util.stream.Collectors.toList());
+
+            double dispatched = districtBatches.stream()
+                    .filter(b -> b.getStatus() == com.minetrace.minetrace.entity.Batch.Status.IN_TRANSIT
+                              || b.getStatus() == com.minetrace.minetrace.entity.Batch.Status.SOLD)
+                    .mapToDouble(b -> b.getInitialWeight())
+                    .sum();
+
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("district",   district);
+            item.put("province",   province);
+            item.put("batches",    batches);
+            item.put("totalWeight", totalWeight);
+            item.put("inStock",    Math.max(0, totalWeight - dispatched));
+            data.add(item);
+        }
+        return Map.of("data", data);
+    }
+
     public Map<String, Object> getRiskReport(String startDate, String endDate) {
         List<Batch> batches = filterBatchesByDate(batchRepository.findAll(), startDate, endDate);
         List<BatchResponse> highRisk = batches.stream()

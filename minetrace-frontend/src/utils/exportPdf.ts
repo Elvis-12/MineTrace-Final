@@ -214,15 +214,18 @@ export const exportFullReportPdf = (data: ReportData) => {
         m.totalBatches > 0 ? Math.round(m.totalWeight / m.totalBatches).toLocaleString() : '0',
       ]),
       theme: 'grid',
-      headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: 'bold', fontSize: 8 },
-      bodyStyles: { fontSize: 8, textColor: DARK },
+      headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: 'bold', fontSize: 8, cellPadding: 4, lineColor: PRIMARY_DARK, lineWidth: 0.3 },
+      bodyStyles: { fontSize: 8, textColor: DARK, cellPadding: 3.5, lineColor: [200, 200, 200], lineWidth: 0.2 },
       alternateRowStyles: { fillColor: LIGHT_GRAY },
+      styles: { overflow: 'linebreak', tableLineColor: PRIMARY, tableLineWidth: 0.4 },
       columnStyles: {
-        1: { halign: 'center' },
-        2: { halign: 'right' },
-        3: { halign: 'right' },
+        0: { cellWidth: 'auto' },
+        1: { halign: 'center', cellWidth: 35 },
+        2: { halign: 'right', cellWidth: 42 },
+        3: { halign: 'right', cellWidth: 48 },
       },
       margin: { left: 10, right: 10 },
+      tableWidth: 'auto',
     });
     y = (doc as any).lastAutoTable.finalY + 10;
   } else {
@@ -245,15 +248,18 @@ export const exportFullReportPdf = (data: ReportData) => {
         `${m.percentage}%`,
       ]),
       theme: 'grid',
-      headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: 'bold', fontSize: 8 },
-      bodyStyles: { fontSize: 8, textColor: DARK },
+      headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: 'bold', fontSize: 8, cellPadding: 4, lineColor: PRIMARY_DARK, lineWidth: 0.3 },
+      bodyStyles: { fontSize: 8, textColor: DARK, cellPadding: 3.5, lineColor: [200, 200, 200], lineWidth: 0.2 },
       alternateRowStyles: { fillColor: LIGHT_GRAY },
+      styles: { overflow: 'linebreak', tableLineColor: PRIMARY, tableLineWidth: 0.4 },
       columnStyles: {
-        1: { halign: 'center' },
-        2: { halign: 'right' },
-        3: { halign: 'right' },
+        0: { cellWidth: 'auto' },
+        1: { halign: 'center', cellWidth: 35 },
+        2: { halign: 'right', cellWidth: 42 },
+        3: { halign: 'right', cellWidth: 42 },
       },
       margin: { left: 10, right: 10 },
+      tableWidth: 'auto',
     });
     y = (doc as any).lastAutoTable.finalY + 10;
   } else {
@@ -325,17 +331,42 @@ export const exportTablePdf = (
   addHeader(doc, title, subtitle);
 
   const columns = Object.keys(rows[0]);
-  const body = rows.map(r => columns.map(c => r[c] ?? ''));
+  const body = rows.map(r => columns.map(c => String(r[c] ?? '')));
+  const colCount = columns.length;
+  const pageW = doc.internal.pageSize.getWidth();
+  const usableW = pageW - 20;
+  const colW = usableW / colCount;
 
   autoTable(doc, {
     startY: 58,
     head: [columns],
     body,
     theme: 'grid',
-    headStyles: { fillColor: PRIMARY_DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 8 },
-    bodyStyles: { fontSize: 7.5, textColor: DARK },
+    headStyles: {
+      fillColor: PRIMARY_DARK,
+      textColor: WHITE,
+      fontStyle: 'bold',
+      fontSize: 8,
+      cellPadding: 4,
+      lineColor: PRIMARY,
+      lineWidth: 0.3,
+    },
+    bodyStyles: {
+      fontSize: 7.5,
+      textColor: DARK,
+      cellPadding: 3,
+      lineColor: [200, 200, 200],
+      lineWidth: 0.2,
+    },
     alternateRowStyles: { fillColor: LIGHT_GRAY },
+    styles: {
+      overflow: 'linebreak',
+      tableLineColor: PRIMARY_DARK,
+      tableLineWidth: 0.4,
+      cellWidth: colW,
+    },
     margin: { left: 10, right: 10 },
+    tableWidth: 'wrap',
     didDrawPage: (d: any) => {
       addFooter(doc, d.pageNumber, (doc as any).internal.getNumberOfPages());
     },

@@ -1,0 +1,6 @@
+INFO:main:Loaded saved model from disk
+INFO:     Started server process [15208]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49629 - "GET /health HTTP/1.1" 200 OK

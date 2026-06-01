@@ -13,6 +13,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { movementApi } from '../../api/movementApi';
 import { batchApi } from '../../api/batchApi';
 import { useAuthStore } from '../../store/authStore';
+import LocationSelect from '../../components/ui/LocationSelect';
 import { formatDate } from '../../utils/formatDate';
 import { exportToCsv } from '../../utils/exportCsv';
 import { exportTablePdf } from '../../utils/exportPdf';
@@ -58,7 +59,7 @@ export default function MovementsPage() {
     enabled: isModalOpen && batchSearch.length > 2,
   });
 
-  const { register, handleSubmit, reset, setValue, watch, getValues, formState: { errors, isSubmitting } } = useForm<MovementForm>({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm<MovementForm>({
     resolver: zodResolver(movementSchema),
     defaultValues: { eventType: 'DISPATCH' }
   });
@@ -142,9 +143,16 @@ export default function MovementsPage() {
   };
 
   const columns: Column<any>[] = [
-    { 
-      key: 'eventType', 
-      label: 'Event Type', 
+    {
+      key: '_index',
+      label: '#',
+      render: (_row, index) => (
+        <span className="text-gray-400 font-medium">{index + 1}</span>
+      ),
+    },
+    {
+      key: 'eventType',
+      label: 'Event Type',
       sortable: true,
       render: (row) => (
         <span className={cn(
@@ -174,8 +182,8 @@ export default function MovementsPage() {
         </span>
       )
     },
-    { key: 'fromLocation', label: 'From', sortable: true },
-    { key: 'toLocation', label: 'To', sortable: true },
+    { key: 'fromLocation', label: 'Source', sortable: true },
+    { key: 'toLocation', label: 'Destination', sortable: true },
     { 
       key: 'weight', 
       label: 'Weight (kg)', 
@@ -241,11 +249,12 @@ export default function MovementsPage() {
           <div className="flex gap-3">
             <button
               onClick={() => {
-                const exportData = filteredMovements.map((m: any) => ({
+                const exportData = filteredMovements.map((m: any, idx: number) => ({
+                  '#': idx + 1,
                   'Event Type': m.eventType,
                   'Batch Code': m.batchCode,
-                  'From': m.fromLocation,
-                  'To': m.toLocation,
+                  'Source': m.fromLocation,
+                  'Destination': m.toLocation,
                   'Weight (kg)': m.weight,
                   'Vehicle': m.vehicle || 'N/A',
                   'Recorded By': m.recordedBy,
@@ -260,11 +269,12 @@ export default function MovementsPage() {
             </button>
             <button
               onClick={() => {
-                const exportData = filteredMovements.map((m: any) => ({
+                const exportData = filteredMovements.map((m: any, idx: number) => ({
+                  '#': idx + 1,
                   'Event Type': m.eventType,
                   'Batch Code': m.batchCode,
-                  'From': m.fromLocation,
-                  'To': m.toLocation,
+                  'Source': m.fromLocation,
+                  'Destination': m.toLocation,
                   'Weight (kg)': m.weight,
                   'Vehicle': m.vehicle || 'N/A',
                   'Driver': m.driverName || 'N/A',
@@ -381,7 +391,7 @@ export default function MovementsPage() {
               />
               {batchSearch.length > 2 && !selectedBatchId && !editingMovement && (
                 <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                  {batchesData?.data?.length > 0 ? (
+                  {batchesData?.data && batchesData.data.length > 0 ? (
                     batchesData.data.map((batch: any) => (
                       <div
                         key={batch.id}
@@ -421,24 +431,20 @@ export default function MovementsPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">From Location *</label>
-              <input
-                type="text"
-                {...register('fromLocation')}
-                className={`mt-1 block w-full px-3 py-2 border ${errors.fromLocation ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
-              />
-              {errors.fromLocation && <p className="mt-1 text-sm text-red-600">{errors.fromLocation.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">To Location *</label>
-              <input
-                type="text"
-                {...register('toLocation')}
-                className={`mt-1 block w-full px-3 py-2 border ${errors.toLocation ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
-              />
-              {errors.toLocation && <p className="mt-1 text-sm text-red-600">{errors.toLocation.message}</p>}
-            </div>
+            <LocationSelect
+              label="Source"
+              required
+              value={watch('fromLocation') || ''}
+              onChange={(val) => setValue('fromLocation', val)}
+              error={errors.fromLocation?.message}
+            />
+            <LocationSelect
+              label="Destination"
+              required
+              value={watch('toLocation') || ''}
+              onChange={(val) => setValue('toLocation', val)}
+              error={errors.toLocation?.message}
+            />
           </div>
 
           <div>

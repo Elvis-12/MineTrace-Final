@@ -8,7 +8,6 @@ public class MineRequest {
     @NotBlank
     private String name;
 
-    @NotBlank
     private String location;
 
     private String province;

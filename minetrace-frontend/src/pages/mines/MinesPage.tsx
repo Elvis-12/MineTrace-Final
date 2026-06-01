@@ -18,10 +18,10 @@ import { exportToCsv } from '../../utils/exportCsv';
 import { exportTablePdf } from '../../utils/exportPdf';
 import { ROUTES } from '../../constants/routes';
 import { cn } from '../../lib/utils';
+import { RWANDA_PROVINCES, getDistricts } from '../../constants/rwandaLocations';
 
 const mineSchema = z.object({
   name: z.string().min(2, 'Mine name is required'),
-  location: z.string().min(2, 'Location is required'),
   province: z.string().optional(),
   district: z.string().optional(),
   licenseNumber: z.string().optional(),
@@ -48,6 +48,7 @@ export default function MinesPage() {
   });
   const [provinceFilter, setProvinceFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [selectedProvince, setSelectedProvince] = useState('');
 
   const { data: minesData, isLoading: isLoadingMines } = useQuery({
     queryKey: ['mines'],
@@ -133,11 +134,11 @@ export default function MinesPage() {
   const handleEdit = (mine: any) => {
     setEditingMine(mine);
     setValue('name', mine.name);
-    setValue('location', mine.location);
     setValue('province', mine.province || '');
     setValue('district', mine.district || '');
     setValue('licenseNumber', mine.licenseNumber || '');
     setValue('organizationId', mine.organizationId || '');
+    setSelectedProvince(mine.province || '');
   };
 
   const handleToggleStatus = (id: string, currentActive: boolean) => {
@@ -149,6 +150,7 @@ export default function MinesPage() {
   };
 
   const columns: Column<any>[] = [
+    { key: '_index', label: '#', render: (_row: any, index: number) => <span className="text-gray-400">{index + 1}</span> },
     { key: 'name', label: 'Name', sortable: true },
     { key: 'location', label: 'Location', sortable: true },
     { key: 'province', label: 'Province', sortable: true },
@@ -243,8 +245,7 @@ export default function MinesPage() {
     filteredMines = filteredMines.filter((m: any) => m.active === isActive);
   }
 
-  // Unique provinces for filter
-  const provinces = Array.from(new Set((minesData?.data || []).map((m: any) => m.province).filter(Boolean)));
+  const provinces = RWANDA_PROVINCES;
 
   return (
     <div className="space-y-6">
@@ -377,32 +378,40 @@ export default function MinesPage() {
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Location *</label>
-              <input
-                type="text"
-                {...register('location')}
-                className={`mt-1 block w-full px-3 py-2 border ${errors.location ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
-              />
-              {errors.location && <p className="mt-1 text-sm text-red-600">{errors.location.message}</p>}
-            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Province</label>
-                <input
-                  type="text"
+                <select
+                  title="Province"
                   {...register('province')}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                />
+                  onChange={(e) => {
+                    setValue('province', e.target.value);
+                    setValue('district', '');
+                    setSelectedProvince(e.target.value);
+                  }}
+                  value={selectedProvince}
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                >
+                  <option value="">Select province</option>
+                  {RWANDA_PROVINCES.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">District</label>
-                <input
-                  type="text"
+                <select
+                  title="District"
                   {...register('district')}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                />
+                  disabled={!selectedProvince}
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md disabled:bg-gray-100"
+                >
+                  <option value="">Select district</option>
+                  {getDistricts(selectedProvince).map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

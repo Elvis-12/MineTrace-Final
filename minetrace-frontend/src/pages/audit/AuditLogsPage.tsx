@@ -19,8 +19,9 @@ export default function AuditLogsPage() {
   });
 
   const columns: Column<any>[] = [
-    { 
-      key: 'timestamp', 
+    { key: '_index', label: '#', render: (_row: any, index: number) => <span className="text-gray-400">{index + 1}</span> },
+    {
+      key: 'timestamp',
       label: 'Timestamp', 
       sortable: true,
       render: (row) => <span className="text-gray-500 whitespace-nowrap">{formatDate(row.timestamp)}</span>

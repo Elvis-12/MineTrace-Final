@@ -7,7 +7,7 @@ export interface Column<T> {
   key: string;
   label: string;
   sortable?: boolean;
-  render?: (row: T) => ReactNode;
+  render?: (row: T, index: number) => ReactNode;
 }
 
 interface DataTableProps<T> {
@@ -108,7 +108,7 @@ export default function DataTable<T extends Record<string, any>>({
                 <th
                   key={col.key}
                   scope="col"
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${col.sortable ? 'cursor-pointer hover:bg-gray-100 select-none' : ''}`}
+                  className={`${col.key === '_index' ? 'px-3 py-3 w-8' : 'px-6 py-3'} text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${col.sortable ? 'cursor-pointer hover:bg-gray-100 select-none' : ''}`}
                   onClick={() => col.sortable && handleSort(col.key)}
                 >
                   <div className="flex items-center gap-1">
@@ -129,19 +129,22 @@ export default function DataTable<T extends Record<string, any>>({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedData.length > 0 ? (
-              paginatedData.map((row, i) => (
-                <tr 
-                  key={row.id || i} 
-                  onClick={() => onRowClick && onRowClick(row)}
-                  className={`${onRowClick ? 'cursor-pointer hover:bg-slate-50 transition-colors' : ''}`}
-                >
-                  {columns.map((col) => (
-                    <td key={`${row.id || i}-${col.key}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {col.render ? col.render(row) : row[col.key]}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              paginatedData.map((row, i) => {
+                const globalIndex = (currentPage - 1) * rowsPerPage + i;
+                return (
+                  <tr
+                    key={row.id || i}
+                    onClick={() => onRowClick && onRowClick(row)}
+                    className={`${onRowClick ? 'cursor-pointer hover:bg-slate-50 transition-colors' : ''}`}
+                  >
+                    {columns.map((col) => (
+                      <td key={`${row.id || i}-${col.key}`} className={`${col.key === '_index' ? 'px-3 py-4 w-8' : 'px-6 py-4'} whitespace-nowrap text-sm text-gray-700`}>
+                        {col.render ? col.render(row, globalIndex) : row[col.key]}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={columns.length} className="px-6 py-12">
