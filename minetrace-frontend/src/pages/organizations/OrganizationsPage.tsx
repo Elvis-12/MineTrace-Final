@@ -145,7 +145,8 @@ export default function OrganizationsPage() {
           <div className="flex gap-3">
             <button
               onClick={() => {
-                const exportData = (orgsData?.data || []).map((org: any) => ({
+                const exportData = (orgsData?.data || []).map((org: any, idx: number) => ({
+                  '#': idx + 1,
                   'Name': org.name,
                   'Address': org.address || 'N/A',
                   'Phone': org.phone || 'N/A',
@@ -162,7 +163,8 @@ export default function OrganizationsPage() {
             </button>
             <button
               onClick={() => {
-                const exportData = (orgsData?.data || []).map((org: any) => ({
+                const exportData = (orgsData?.data || []).map((org: any, idx: number) => ({
+                  '#': idx + 1,
                   'Name': org.name,
                   'Address': org.address || 'N/A',
                   'Phone': org.phone || 'N/A',

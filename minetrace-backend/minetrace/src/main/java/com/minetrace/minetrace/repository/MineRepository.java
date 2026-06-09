@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface MineRepository extends JpaRepository<Mine, Long> {
     List<Mine> findByActiveTrue();
+    List<Mine> findByActiveTrueAndDistrict(String district);
 }

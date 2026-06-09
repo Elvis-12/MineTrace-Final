@@ -256,7 +256,8 @@ export default function MinesPage() {
           <div className="flex gap-3">
             <button
               onClick={() => {
-                const exportData = filteredMines.map((m: any) => ({
+                const exportData = filteredMines.map((m: any, idx: number) => ({
+                  '#': idx + 1,
                   'Name': m.name,
                   'Location': m.location,
                   'Province': m.province || 'N/A',
@@ -275,7 +276,8 @@ export default function MinesPage() {
             </button>
             <button
               onClick={() => {
-                const exportData = filteredMines.map((m: any) => ({
+                const exportData = filteredMines.map((m: any, idx: number) => ({
+                  '#': idx + 1,
                   'Name': m.name,
                   'Location': m.location,
                   'Province': m.province || 'N/A',

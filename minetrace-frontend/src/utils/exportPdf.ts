@@ -1,6 +1,19 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+// Pre-load logo as base64 in the background as soon as the module is imported
+let _logoBase64: string | null = null;
+fetch('/eamitraco-logo.png')
+  .then(r => r.blob())
+  .then(blob => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  }))
+  .then(b64 => { _logoBase64 = b64; })
+  .catch(() => { /* logo file not found, will use text fallback */ });
+
 // Brand colours
 const PRIMARY_DARK  = [15,  40,  80]  as [number, number, number]; // #0f2850
 const PRIMARY       = [30,  58,  138] as [number, number, number]; // #1e3a8a
@@ -13,42 +26,92 @@ const RED           = [220, 38,  38]  as [number, number, number];
 const GREEN         = [22,  163, 74]  as [number, number, number];
 const AMBER         = [217, 119, 6]   as [number, number, number];
 
-function addHeader(doc: jsPDF, title: string, subtitle: string, dateRange?: string) {
+function parseFlexibleDate(str: string): Date | null {
+  if (!str || str === '-') return null;
+  // dd/MM/yyyy HH:mm  (our formatDate output)
+  const ddmm = str.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  if (ddmm) {
+    return new Date(
+      +ddmm[3], +ddmm[2] - 1, +ddmm[1],
+      +(ddmm[4] ?? 0), +(ddmm[5] ?? 0)
+    );
+  }
+  // ISO or any other format browsers handle
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function detectDateRange(rows: Record<string, any>[]): string | undefined {
+  if (!rows.length) return undefined;
+
+  const dateKeys = Object.keys(rows[0]).filter(k =>
+    /date|timestamp|time/i.test(k) && k !== '#'
+  );
+  if (!dateKeys.length) return undefined;
+
+  const allDates: Date[] = [];
+  for (const row of rows) {
+    for (const key of dateKeys) {
+      const d = parseFlexibleDate(String(row[key] ?? ''));
+      if (d) allDates.push(d);
+    }
+  }
+
+  if (!allDates.length) return undefined;
+
+  const ms = allDates.map(d => d.getTime());
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const minDate = new Date(Math.min(...ms));
+  const maxDate = new Date(Math.max(...ms));
+
+  return minDate.getTime() === maxDate.getTime()
+    ? fmt(minDate)
+    : `${fmt(minDate)}  –  ${fmt(maxDate)}`;
+}
+
+function addHeader(doc: jsPDF, title: string, subtitle: string, dateRange?: string, filterLabel?: string) {
   const pageW = doc.internal.pageSize.getWidth();
 
   // Top bar
   doc.setFillColor(...PRIMARY_DARK);
   doc.rect(0, 0, pageW, 28, 'F');
 
-  // Logo box
-  doc.setFillColor(...ACCENT);
-  doc.roundedRect(10, 5, 18, 18, 2, 2, 'F');
-  doc.setTextColor(...WHITE);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('MT', 19, 16.5, { align: 'center' });
+  // Company logo
+  if (_logoBase64) {
+    try {
+      doc.addImage(_logoBase64, 'PNG', 8, 3, 22, 22);
+    } catch {
+      _logoBase64 = null; // reset so fallback is used next time too
+    }
+  }
+  if (!_logoBase64) {
+    doc.setFillColor(...ACCENT);
+    doc.roundedRect(10, 5, 18, 18, 2, 2, 'F');
+    doc.setTextColor(...WHITE);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('EA', 19, 16.5, { align: 'center' });
+  }
 
   // Title
+  doc.setTextColor(...WHITE);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('MineTrace', 32, 12);
+  doc.text('EAMITRACO', 34, 13);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('Mineral Traceability Management System', 32, 18);
-
-  // Case study tag
-  doc.setFontSize(7);
-  doc.setTextColor(...ACCENT);
-  doc.text('Case Study: EAMITRACO', 32, 24);
+  doc.text('Mineral Traceability Management System', 34, 21);
 
   // Report date (top right)
   doc.setTextColor(...WHITE);
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   const now = new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
-  doc.text(`Generated: ${now}`, pageW - 10, 10, { align: 'right' });
+  doc.text(`Generated: ${now}`, pageW - 10, 8, { align: 'right' });
   if (dateRange) {
-    doc.text(`Period: ${dateRange}`, pageW - 10, 17, { align: 'right' });
+    doc.text(`Period: ${dateRange}`, pageW - 10, 15, { align: 'right' });
   }
 
   // Report title section
@@ -62,6 +125,15 @@ function addHeader(doc: jsPDF, title: string, subtitle: string, dateRange?: stri
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...MID_GRAY);
   doc.text(subtitle, 14, 47);
+
+  // Filter label on the right side of the title strip
+  if (filterLabel) {
+    const displayLabel = filterLabel.replace(/\bDistrict:/gi, 'Mining Site:');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...PRIMARY);
+    doc.text(displayLabel, pageW - 14, 40, { align: 'right' });
+  }
 
   // Separator line
   doc.setDrawColor(...ACCENT);
@@ -127,6 +199,8 @@ export interface ReportData {
   mineralDistribution: Array<{ mineralType: string; totalBatches: number; totalWeight: number; percentage: number }>;
   dateFrom?: string;
   dateTo?: string;
+  location?: string;
+  recordDateRange?: string;
 }
 
 export const exportFullReportPdf = (data: ReportData) => {
@@ -135,10 +209,12 @@ export const exportFullReportPdf = (data: ReportData) => {
 
   const dateRange = data.dateFrom || data.dateTo
     ? `${data.dateFrom || 'Start'} → ${data.dateTo || 'Present'}`
-    : undefined;
+    : data.recordDateRange || 'All Records';
+
+  const locationLabel = data.location ? `Mining Site: ${data.location}` : undefined;
 
   // ── PAGE 1 ──────────────────────────────────────────────────────────────
-  addHeader(doc, 'Executive Summary Report', 'Mineral traceability overview — supply chain performance and risk indicators', dateRange);
+  addHeader(doc, 'Executive Summary Report', 'Mineral traceability overview — supply chain performance and risk indicators', dateRange, locationLabel);
 
   // Stat boxes row
   const boxY = 58;
@@ -197,7 +273,7 @@ export const exportFullReportPdf = (data: ReportData) => {
 
   // ── PAGE 2 ──────────────────────────────────────────────────────────────
   doc.addPage();
-  addHeader(doc, 'Production & Distribution Report', 'Mine output breakdown and mineral type analysis', dateRange);
+  addHeader(doc, 'Production & Distribution Report', 'Mine output breakdown and mineral type analysis', dateRange, locationLabel);
 
   y = 58;
 
@@ -206,8 +282,9 @@ export const exportFullReportPdf = (data: ReportData) => {
   if (data.mineProduction.length > 0) {
     autoTable(doc, {
       startY: y,
-      head: [['Mine Name', 'Total Batches', 'Total Weight (kg)', 'Avg Weight / Batch (kg)']],
-      body: data.mineProduction.map(m => [
+      head: [['#', 'Mine Name', 'Total Batches', 'Total Weight (kg)', 'Avg Weight / Batch (kg)']],
+      body: data.mineProduction.map((m, idx) => [
+        idx + 1,
         m.mineName,
         m.totalBatches,
         m.totalWeight.toLocaleString(),
@@ -217,12 +294,15 @@ export const exportFullReportPdf = (data: ReportData) => {
       headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: 'bold', fontSize: 8, cellPadding: 4, lineColor: PRIMARY_DARK, lineWidth: 0.3 },
       bodyStyles: { fontSize: 8, textColor: DARK, cellPadding: 3.5, lineColor: [200, 200, 200], lineWidth: 0.2 },
       alternateRowStyles: { fillColor: LIGHT_GRAY },
-      styles: { overflow: 'linebreak', tableLineColor: PRIMARY, tableLineWidth: 0.4 },
+      styles: { overflow: 'linebreak' },
+      tableLineColor: PRIMARY,
+      tableLineWidth: 0.4,
       columnStyles: {
-        0: { cellWidth: 'auto' },
-        1: { halign: 'center', cellWidth: 35 },
-        2: { halign: 'right', cellWidth: 42 },
-        3: { halign: 'right', cellWidth: 48 },
+        0: { cellWidth: 8 },
+        1: { cellWidth: 'auto' },
+        2: { halign: 'center', cellWidth: 32 },
+        3: { halign: 'right', cellWidth: 40 },
+        4: { halign: 'right', cellWidth: 44 },
       },
       margin: { left: 10, right: 10 },
       tableWidth: 'auto',
@@ -240,8 +320,9 @@ export const exportFullReportPdf = (data: ReportData) => {
   if (data.mineralDistribution.length > 0) {
     autoTable(doc, {
       startY: y,
-      head: [['Mineral Type', 'Total Batches', 'Total Weight (kg)', '% of Total Volume']],
-      body: data.mineralDistribution.map(m => [
+      head: [['#', 'Mineral Type', 'Total Batches', 'Total Weight (kg)', '% of Total Volume']],
+      body: data.mineralDistribution.map((m, idx) => [
+        idx + 1,
         m.mineralType,
         m.totalBatches,
         m.totalWeight.toLocaleString(),
@@ -251,12 +332,15 @@ export const exportFullReportPdf = (data: ReportData) => {
       headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: 'bold', fontSize: 8, cellPadding: 4, lineColor: PRIMARY_DARK, lineWidth: 0.3 },
       bodyStyles: { fontSize: 8, textColor: DARK, cellPadding: 3.5, lineColor: [200, 200, 200], lineWidth: 0.2 },
       alternateRowStyles: { fillColor: LIGHT_GRAY },
-      styles: { overflow: 'linebreak', tableLineColor: PRIMARY, tableLineWidth: 0.4 },
+      styles: { overflow: 'linebreak' },
+      tableLineColor: PRIMARY,
+      tableLineWidth: 0.4,
       columnStyles: {
-        0: { cellWidth: 'auto' },
-        1: { halign: 'center', cellWidth: 35 },
-        2: { halign: 'right', cellWidth: 42 },
-        3: { halign: 'right', cellWidth: 42 },
+        0: { cellWidth: 8 },
+        1: { cellWidth: 'auto' },
+        2: { halign: 'center', cellWidth: 32 },
+        3: { halign: 'right', cellWidth: 40 },
+        4: { halign: 'right', cellWidth: 40 },
       },
       margin: { left: 10, right: 10 },
       tableWidth: 'auto',
@@ -324,18 +408,32 @@ export const exportTablePdf = (
   subtitle: string,
   rows: Record<string, any>[],
   filename: string,
+  filterLabel?: string,
 ) => {
   if (!rows.length) return;
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: rows[0] && Object.keys(rows[0]).length > 6 ? 'landscape' : 'portrait' });
 
-  addHeader(doc, title, subtitle);
+  const dateRange = detectDateRange(rows);
+  addHeader(doc, title, subtitle, dateRange, filterLabel);
 
   const columns = Object.keys(rows[0]);
   const body = rows.map(r => columns.map(c => String(r[c] ?? '')));
-  const colCount = columns.length;
+  const hasIndex = columns[0] === '#';
+  const indexWidth = 10;
   const pageW = doc.internal.pageSize.getWidth();
   const usableW = pageW - 20;
-  const colW = usableW / colCount;
+  const otherColCount = hasIndex ? columns.length - 1 : columns.length;
+  const otherColW = hasIndex
+    ? (usableW - indexWidth) / otherColCount
+    : usableW / otherColCount;
+
+  const colStyles: Record<number, any> = {};
+  if (hasIndex) {
+    colStyles[0] = { cellWidth: indexWidth, halign: 'center' };
+    for (let i = 1; i < columns.length; i++) {
+      colStyles[i] = { cellWidth: otherColW };
+    }
+  }
 
   autoTable(doc, {
     startY: 58,
@@ -359,12 +457,13 @@ export const exportTablePdf = (
       lineWidth: 0.2,
     },
     alternateRowStyles: { fillColor: LIGHT_GRAY },
+    columnStyles: hasIndex ? colStyles : undefined,
     styles: {
       overflow: 'linebreak',
-      tableLineColor: PRIMARY_DARK,
-      tableLineWidth: 0.4,
-      cellWidth: colW,
+      ...(hasIndex ? {} : { cellWidth: otherColW }),
     },
+    tableLineColor: PRIMARY_DARK,
+    tableLineWidth: 0.4,
     margin: { left: 10, right: 10 },
     tableWidth: 'wrap',
     didDrawPage: (d: any) => {

@@ -97,6 +97,7 @@ export default function BatchesPage() {
   const [riskFilter, setRiskFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [districtFilter, setDistrictFilter] = useState("");
 
   const { data: batchesData, isLoading: isLoadingBatches } = useQuery({
     queryKey: ["batches"],
@@ -326,6 +327,7 @@ export default function BatchesPage() {
   ];
 
   let filteredBatches = batchesData?.data || [];
+  const mineMap = new Map((minesData?.data || []).map((m: any) => [m.id, m]));
 
   if (statusFilter) {
     filteredBatches = filteredBatches.filter(
@@ -337,7 +339,11 @@ export default function BatchesPage() {
       (b: any) => b.mineralType === mineralFilter,
     );
   }
-  if (mineFilter) {
+  if (districtFilter) {
+    filteredBatches = filteredBatches.filter(
+      (b: any) => mineMap.get(b.mineId)?.district === districtFilter,
+    );
+  } else if (mineFilter) {
     filteredBatches = filteredBatches.filter(
       (b: any) => b.mineId === mineFilter,
     );
@@ -404,7 +410,8 @@ export default function BatchesPage() {
           <div className="flex gap-3">
             <button
               onClick={() => {
-                const exportData = filteredBatches.map((b: any) => ({
+                const exportData = filteredBatches.map((b: any, idx: number) => ({
+                  "#": idx + 1,
                   "Batch Code": b.batchCode,
                   "Mineral Type": b.mineralType,
                   "Initial Weight (kg)": b.initialWeight,
@@ -424,7 +431,8 @@ export default function BatchesPage() {
             </button>
             <button
               onClick={() => {
-                const exportData = filteredBatches.map((b: any) => ({
+                const exportData = filteredBatches.map((b: any, idx: number) => ({
+                  "#": idx + 1,
                   "Batch Code": b.batchCode,
                   "Mineral Type": b.mineralType,
                   "Initial Weight (kg)": b.initialWeight,
@@ -435,11 +443,20 @@ export default function BatchesPage() {
                   "Created By": b.createdBy,
                   "Date Registered": formatDate(b.createdAt),
                 }));
+                const selectedMine = (minesData?.data || []).find((m: any) => m.id === mineFilter);
+                const batchFilterLabel = [
+                  districtFilter ? `District: ${districtFilter}` : '',
+                  selectedMine && !districtFilter ? `Mine: ${selectedMine.name}` : '',
+                  mineralFilter ? `Mineral: ${mineralFilter}` : '',
+                  statusFilter ? `Status: ${statusFilter}` : '',
+                  riskFilter ? `Risk: ${riskFilter}` : '',
+                ].filter(Boolean).join(' | ') || undefined;
                 exportTablePdf(
                   "Mineral Batches Register",
                   "All registered mineral batches and their current status",
                   exportData,
                   "minetrace-batches",
+                  batchFilterLabel,
                 );
               }}
               className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
@@ -581,6 +598,20 @@ export default function BatchesPage() {
         </button>
       </div>
 
+      {viewMode === "list" && districtFilter && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-primary-50 border border-primary-200 rounded-lg text-sm text-primary-800">
+          <MapPin className="h-4 w-4 text-primary-500 shrink-0" />
+          <span>Showing batches from <span className="font-semibold">{districtFilter}</span></span>
+          <button
+            type="button"
+            onClick={() => setDistrictFilter("")}
+            className="ml-auto text-xs text-primary-600 hover:text-primary-900 underline"
+          >
+            Clear district filter
+          </button>
+        </div>
+      )}
+
       {viewMode === "list" ? (
         <DataTable
           columns={columns}
@@ -638,10 +669,8 @@ export default function BatchesPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        const mine = (minesData?.data || []).find(
-                          (m: any) => m.district === group.district,
-                        );
-                        if (mine) setMineFilter(mine.id);
+                        setDistrictFilter(group.district);
+                        setMineFilter("");
                         setViewMode("list");
                       }}
                       className="text-primary-600 hover:text-primary-900 font-medium"

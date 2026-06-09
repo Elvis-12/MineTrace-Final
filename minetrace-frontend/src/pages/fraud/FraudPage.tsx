@@ -134,7 +134,8 @@ export default function FraudPage() {
           <div className="flex gap-3">
             <button
               onClick={() => {
-                const exportData = batches.map((b: any) => ({
+                const exportData = batches.map((b: any, idx: number) => ({
+                  '#': idx + 1,
                   'Batch Code': b.batchCode,
                   'Mineral Type': b.mineralType,
                   'Anomaly Score': `${(b.anomalyScore * 100).toFixed(0)}%`,
@@ -154,7 +155,8 @@ export default function FraudPage() {
             </button>
             <button
               onClick={() => {
-                const exportData = batches.map((b: any) => ({
+                const exportData = batches.map((b: any, idx: number) => ({
+                  '#': idx + 1,
                   'Batch Code': b.batchCode,
                   'Mineral Type': b.mineralType,
                   'Anomaly Score': `${(b.anomalyScore * 100).toFixed(0)}%`,

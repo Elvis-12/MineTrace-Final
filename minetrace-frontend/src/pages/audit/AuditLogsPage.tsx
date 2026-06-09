@@ -85,7 +85,8 @@ export default function AuditLogsPage() {
           <div className="flex gap-3">
           <button
             onClick={() => {
-              const exportData = (logsData?.data || []).map((log: any) => ({
+              const exportData = (logsData?.data || []).map((log: any, idx: number) => ({
+                '#': idx + 1,
                 'Timestamp': formatDate(log.timestamp),
                 'Action': log.action,
                 'Entity': log.entityType,
@@ -104,7 +105,8 @@ export default function AuditLogsPage() {
           </button>
           <button
             onClick={() => {
-              const exportData = (logsData?.data || []).map((log: any) => ({
+              const exportData = (logsData?.data || []).map((log: any, idx: number) => ({
+                '#': idx + 1,
                 'Timestamp': formatDate(log.timestamp),
                 'Action': log.action,
                 'Entity': log.entityType,

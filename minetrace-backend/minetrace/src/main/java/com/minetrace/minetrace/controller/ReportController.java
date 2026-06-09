@@ -15,18 +15,21 @@ public class ReportController {
     private final ReportService reportService;
 
     @GetMapping("/summary")
-    public ResponseEntity<Map<String, Object>> getSummary() {
-        return ResponseEntity.ok(reportService.getSummary());
+    public ResponseEntity<Map<String, Object>> getSummary(
+            @RequestParam(required = false) String district) {
+        return ResponseEntity.ok(reportService.getSummary(district));
     }
 
     @GetMapping("/mine-production")
-    public ResponseEntity<Map<String, Object>> getMineProduction() {
-        return ResponseEntity.ok(reportService.getMineProduction());
+    public ResponseEntity<Map<String, Object>> getMineProduction(
+            @RequestParam(required = false) String district) {
+        return ResponseEntity.ok(reportService.getMineProduction(district));
     }
 
     @GetMapping("/mineral-distribution")
-    public ResponseEntity<Map<String, Object>> getMineralDistribution() {
-        return ResponseEntity.ok(reportService.getMineralDistribution());
+    public ResponseEntity<Map<String, Object>> getMineralDistribution(
+            @RequestParam(required = false) String district) {
+        return ResponseEntity.ok(reportService.getMineralDistribution(district));
     }
 
     @GetMapping("/production")

@@ -243,7 +243,8 @@ export default function UsersPage() {
           <div className="flex gap-3">
             <button
               onClick={() => {
-                const exportData = filteredUsers.map((u: any) => ({
+                const exportData = filteredUsers.map((u: any, idx: number) => ({
+                  '#': idx + 1,
                   'Full Name': u.fullName,
                   'Email': u.email,
                   'Role': u.role,
@@ -260,7 +261,8 @@ export default function UsersPage() {
             </button>
             <button
               onClick={() => {
-                const exportData = filteredUsers.map((u: any) => ({
+                const exportData = filteredUsers.map((u: any, idx: number) => ({
+                  '#': idx + 1,
                   'Full Name': u.fullName,
                   'Email': u.email,
                   'Role': u.role,

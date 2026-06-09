@@ -25,22 +25,35 @@ public class ReportService {
     private final BatchService batchService;
     private final MovementService movementService;
 
-    public Map<String, Object> getSummary() {
-        long totalBatches = batchRepository.countTotal();
-        double totalWeight = batchRepository.sumTotalWeight();
-        long activeMines = mineRepository.findByActiveTrue().size();
-        long flaggedBatches = batchRepository.countFlagged();
+    public Map<String, Object> getSummary(String district) {
+        boolean hasDistrict = district != null && !district.isBlank();
+        long totalBatches    = hasDistrict ? batchRepository.countTotalByDistrict(district)        : batchRepository.countTotal();
+        double totalWeight   = hasDistrict ? batchRepository.sumTotalWeightByDistrict(district)    : batchRepository.sumTotalWeight();
+        long activeMines     = hasDistrict ? mineRepository.findByActiveTrueAndDistrict(district).size() : mineRepository.findByActiveTrue().size();
+        long flaggedBatches  = hasDistrict ? batchRepository.countFlaggedByDistrict(district)      : batchRepository.countFlagged();
+
+        java.time.LocalDateTime oldest = hasDistrict
+                ? batchRepository.getOldestBatchDateByDistrict(district)
+                : batchRepository.getOldestBatchDate();
+        java.time.LocalDateTime newest = hasDistrict
+                ? batchRepository.getNewestBatchDateByDistrict(district)
+                : batchRepository.getNewestBatchDate();
 
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("totalBatches", totalBatches);
         summary.put("totalWeight", totalWeight);
         summary.put("activeMines", activeMines);
         summary.put("flaggedBatches", flaggedBatches);
+        summary.put("oldestRecordDate", oldest != null ? oldest.toLocalDate().toString() : null);
+        summary.put("newestRecordDate", newest != null ? newest.toLocalDate().toString() : null);
         return summary;
     }
 
-    public Map<String, Object> getMineProduction() {
-        List<Object[]> stats = batchRepository.getMineProductionStats();
+    public Map<String, Object> getMineProduction(String district) {
+        boolean hasDistrict = district != null && !district.isBlank();
+        List<Object[]> stats = hasDistrict
+                ? batchRepository.getMineProductionStatsByDistrict(district)
+                : batchRepository.getMineProductionStats();
         List<Map<String, Object>> data = new ArrayList<>();
         for (Object[] row : stats) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -52,8 +65,11 @@ public class ReportService {
         return Map.of("data", data);
     }
 
-    public Map<String, Object> getMineralDistribution() {
-        List<Object[]> stats = batchRepository.getMineralDistributionStats();
+    public Map<String, Object> getMineralDistribution(String district) {
+        boolean hasDistrict = district != null && !district.isBlank();
+        List<Object[]> stats = hasDistrict
+                ? batchRepository.getMineralDistributionStatsByDistrict(district)
+                : batchRepository.getMineralDistributionStats();
         double grandTotal = stats.stream()
                 .mapToDouble(r -> ((Number) r[1]).doubleValue())
                 .sum();

@@ -13,36 +13,43 @@ import PageHeader from "../../components/ui/PageHeader";
 import { reportApi } from "../../api/reportApi";
 import { exportFullReportPdf } from "../../utils/exportPdf";
 import { exportToCsv } from "../../utils/exportCsv";
+import { RWANDA_PROVINCES_DISTRICTS } from "../../constants/rwandaLocations";
+
+const ALL_DISTRICTS = Object.values(RWANDA_PROVINCES_DISTRICTS).flat().sort();
 
 export default function ReportsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [district, setDistrict] = useState("");
   const [isExporting, setIsExporting] = useState(false);
 
   const { data: summaryData, isLoading: isLoadingSummary } = useQuery({
-    queryKey: ["reportSummary", dateFrom, dateTo],
+    queryKey: ["reportSummary", dateFrom, dateTo, district],
     queryFn: () =>
       reportApi.getSummary({
         startDate: dateFrom || undefined,
         endDate: dateTo || undefined,
+        district: district || undefined,
       }),
   });
 
   const { data: mineData, isLoading: isLoadingMine } = useQuery({
-    queryKey: ["reportMine", dateFrom, dateTo],
+    queryKey: ["reportMine", dateFrom, dateTo, district],
     queryFn: () =>
       reportApi.getMineProduction({
         startDate: dateFrom || undefined,
         endDate: dateTo || undefined,
+        district: district || undefined,
       }),
   });
 
   const { data: mineralData, isLoading: isLoadingMineral } = useQuery({
-    queryKey: ["reportMineral", dateFrom, dateTo],
+    queryKey: ["reportMineral", dateFrom, dateTo, district],
     queryFn: () =>
       reportApi.getMineralDistribution({
         startDate: dateFrom || undefined,
         endDate: dateTo || undefined,
+        district: district || undefined,
       }),
   });
 
@@ -57,12 +64,21 @@ export default function ReportsPage() {
     if (!summaryData?.data) return;
     setIsExporting(true);
     try {
+      const { oldestRecordDate, newestRecordDate } = summaryData.data;
+      const recordDateRange = oldestRecordDate && newestRecordDate
+        ? oldestRecordDate === newestRecordDate
+          ? oldestRecordDate
+          : `${oldestRecordDate}  –  ${newestRecordDate}`
+        : undefined;
+
       exportFullReportPdf({
         summary: summaryData.data,
         mineProduction: mineData?.data || [],
         mineralDistribution: mineralData?.data || [],
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
+        location: district || undefined,
+        recordDateRange,
       });
     } finally {
       setIsExporting(false);
@@ -71,7 +87,8 @@ export default function ReportsPage() {
 
   const handleExportCsv = () => {
     if (!mineData?.data) return;
-    const data = mineData.data.map((item: any) => ({
+    const data = mineData.data.map((item: any, idx: number) => ({
+      "#": idx + 1,
       "Mine Name": item.mineName,
       "Total Batches": item.totalBatches,
       "Total Weight (kg)": item.totalWeight,
@@ -139,10 +156,33 @@ export default function ReportsPage() {
               />
             </div>
           </div>
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              District
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MapPin className="h-4 w-4 text-gray-400" />
+              </div>
+              <select
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                className="block w-full pl-10 border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm py-2"
+              >
+                <option value="">All Districts</option>
+                {ALL_DISTRICTS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <button
             onClick={() => {
               setDateFrom("");
               setDateTo("");
+              setDistrict("");
             }}
             className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
           >
@@ -271,19 +311,35 @@ export default function ReportsPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">#</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mine</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Batches</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Weight (kg)</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                      #
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Mine
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Batches
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Weight (kg)
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {mineData.data.map((mine: any, idx: number) => (
                     <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 text-sm text-gray-400 font-medium">{idx + 1}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{mine.mineName}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 text-right">{mine.totalBatches}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900 text-right">{mine.totalWeight.toLocaleString()}</td>
+                      <td className="px-4 py-4 text-sm text-gray-400 font-medium">
+                        {idx + 1}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        {mine.mineName}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 text-right">
+                        {mine.totalBatches}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900 text-right">
+                        {mine.totalWeight.toLocaleString()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -307,7 +363,8 @@ export default function ReportsPage() {
               onClick={() => {
                 if (!stockData?.data?.data) return;
                 exportToCsv(
-                  stockData.data.data.map((r: any) => ({
+                  stockData.data.data.map((r: any, idx: number) => ({
+                    "#": idx + 1,
                     District: r.district,
                     Province: r.province,
                     "Total Batches": r.batches,
@@ -334,7 +391,9 @@ export default function ReportsPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">#</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                      #
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       District
                     </th>
@@ -355,7 +414,9 @@ export default function ReportsPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {stockData.data.data.map((row: any, idx: number) => (
                     <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 text-sm text-gray-400 font-medium">{idx + 1}</td>
+                      <td className="px-4 py-4 text-sm text-gray-400 font-medium">
+                        {idx + 1}
+                      </td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900 flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-primary-400" />
                         {row.district}
@@ -406,7 +467,9 @@ export default function ReportsPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">#</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                      #
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Mineral Type
                     </th>
@@ -424,7 +487,9 @@ export default function ReportsPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {mineralData.data.map((mineral: any, idx: number) => (
                     <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 text-sm text-gray-400 font-medium">{idx + 1}</td>
+                      <td className="px-4 py-4 text-sm text-gray-400 font-medium">
+                        {idx + 1}
+                      </td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">
                         {mineral.mineralType}
                       </td>
